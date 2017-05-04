@@ -34,7 +34,7 @@ my $mgmt_server = '';
 my $node_input_list = '';
 my $test_comp_local = '';
 my $test_comp_remote = '';
-########################
+#########################
 #Init of vars while reading node list for options
 my $node_is_controlled = "0";
 my $already_tested_383 = "0";
