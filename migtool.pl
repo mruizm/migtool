@@ -14,6 +14,7 @@
 #            node_input_list|-l                 #<---- completed - complementary switch to use input file with list of managed nodes
 
 # To do: Create routine to make migtool dirs
+# Test
 
 use strict;
 use warnings;
