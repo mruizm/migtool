@@ -13,9 +13,6 @@
 #            mgmt_server|-m                     #<---- completed - complementary switch for input file with hpom host entries (hosts file like)
 #            node_input_list|-l                 #<---- completed - complementary switch to use input file with list of managed nodes
 
-# To do: Create routine to make migtool dirs
-
-
 use strict;
 use warnings;
 use Getopt::Long;
