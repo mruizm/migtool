@@ -840,22 +840,43 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
               {
                 if ($in_nodename_ip eq "NODE_NOT_FOUND")
                 {
-                  $hash_check_value{$k_to_node_https_test} = "NODE_NOT_FOUND";
+                  $hash_check_value{$k_to_node_oa_status} = "NODE_NOT_FOUND";
                 }
                 if ($in_nodename_mach_type =~ m/MACH_BBC_OTHER/)
                 {
-                  $hash_check_value{$k_to_node_https_test} = "NODE_NOT_CONTROLLED";
+                  $hash_check_value{$k_to_node_oa_status} = "NODE_NOT_CONTROLLED";
                 }
                 if ($in_nodename_ip ne "NODE_NOT_FOUND" && $in_nodename_mach_type !~ m/MACH_BBC_OTHER/)
                 {
-                  #Execute the oa_status routine
-                  if ($r_testOvdeploy_HpomToNode_383_SSL_local eq "1")
+                  if ($already_tested_383 eq "0")
                   {
-                    $hash_check_value{$k_to_node_oa_status} = "OK";
+                    if (($r_testOvdeploy_HpomToNode_383_SSL = testOvdeploy_HpomToNode_383_SSL($in_nodename, "3000")) eq "1")
+                    {
+                      $already_tested_383 = "1";
+                    }
+                    else
+                    {
+                      $already_tested_383 = "2";
+                    }
                   }
-                  else
+                  if ($already_tested_383 eq "2")
                   {
-                    $hash_check_value{$k_to_node_oa_status} = "NOK";
+                    #Failed 383 SSL Comm to managed node
+                    $hash_check_value{$k_to_node_oa_status} = "NA";
+                  }
+                  if ($already_tested_383 eq "1")
+                  {
+                    #If comm 383 SSL is OK exec oastatus routine
+                    $r_oastatus = oastatus($in_nodename, "3000");
+                    #print "val: $r_update_cert\n";
+                    if($r_oastatus eq "0")
+                    {
+                      $hash_check_value{$k_to_node_oa_status} = "OK";
+                    }
+                    if($r_oastatus eq "1")
+                    {
+                      $hash_check_value{$k_to_node_oa_status} = "NOK";
+                    }
                   }
                 }
               }
@@ -1604,5 +1625,20 @@ sub icmp_to_host_test
 
 sub oastatus
 {
-
+  my ($nodename, $cmd_timeout) = @_;
+  my @oastatus_cmd = qx{ovdeploy -cmd \"opcragt -status $nodename\" -ovrg server};
+  my $procs_ok = 0;
+  foreach my $oastatus_cmd_line (@oastatus_cmd)
+  {
+    chomp($oastatus_cmd_line);
+    if ($oastatus_cmd_line =~ m/(coda|ovbbccb|ovcd|ovconfd)\s+\(\d+\)\sis\s+running$/)
+    {
+      $procs_ok++;
+    }
+  }
+  if ($procs_ok == 4)
+  {
+    return 0;
+  }
+  return 1;
 }
