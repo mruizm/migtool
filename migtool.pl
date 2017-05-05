@@ -831,16 +831,35 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
                 }
               }
             }
-            #
-            #case "oastatus"
-            #{
-            #  if ($gen_node_list)
-            #  {
-            #  }
-            #  if ($node_input_list)
-            #  {
-            #  }
-            #}
+            case "oastatus"
+            {
+              if ($gen_node_list)
+              {
+              }
+              if ($node_input_list)
+              {
+                if ($in_nodename_ip eq "NODE_NOT_FOUND")
+                {
+                  $hash_check_value{$k_to_node_https_test} = "NODE_NOT_FOUND";
+                }
+                if ($in_nodename_mach_type =~ m/MACH_BBC_OTHER/)
+                {
+                  $hash_check_value{$k_to_node_https_test} = "NODE_NOT_CONTROLLED";
+                }
+                if ($in_nodename_ip ne "NODE_NOT_FOUND" && $in_nodename_mach_type !~ m/MACH_BBC_OTHER/)
+                {
+                  #Execute the oa_status routine
+                  if ($r_testOvdeploy_HpomToNode_383_SSL_local eq "1")
+                  {
+                    $hash_check_value{$k_to_node_oa_status} = "OK";
+                  }
+                  else
+                  {
+                    $hash_check_value{$k_to_node_oa_status} = "NOK";
+                  }
+                }
+              }
+            }
           }
         }
         @test_header_values = ("node_name,node_ip,node_mach_type");
@@ -1581,4 +1600,9 @@ sub icmp_to_host_test
 		}
 	}
 	return $icmp_result_porcentaje;
+}
+
+sub oastatus
+{
+
 }
