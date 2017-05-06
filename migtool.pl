@@ -71,6 +71,7 @@ my $counter_iterations = 0;
 my $r_testOvdeploy_HpomToNode_383_SSL_local;
 my $r_testOvdeploy_HpomToNode_383_local;
 my $r_test_icmp_to_node;
+my $r_oastatus;
 my $scalar_test_header_values;
 my $scalar_test_return_values;
 #############################################################
@@ -215,7 +216,7 @@ if ($assign_ng)
         #Node NOT FOUND
         print "Node $nodename_assign NOT FOUND...SKIPPING!\n";
         chomp($datetime_stamp_log = `date "+%m%d%Y_%H%M%S"`);
-        script_logger($datetime_stamp_log, $migtool_log, "$nodename_assign:node_pre_check_assign_ng:check_node_in_HPOM():NODE_NOT_FOUND");
+        script_logger($datetime_stamp_log, $migtool_log, "$nodename_assign:node_pre_check_assign_ng:check_node_in_HPOM():NOT_FOUND");
       }
       else
       {
@@ -428,9 +429,9 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
         if($r_check_node_in_HPOM[0] eq "0")
         {
           #
-          chomp($in_nodename_ip = "NODE_NOT_FOUND");
-          chomp($in_nodename_mach_type = "NODE_NOT_FOUND");
-          #$init_csv_line = "$in_nodename;NODE_NOT_FOUND";
+          chomp($in_nodename_ip = "NOT_FOUND");
+          chomp($in_nodename_mach_type = "NOT_FOUND");
+          #$init_csv_line = "$in_nodename;NOT_FOUND";
           #print "$init_csv_line\n";
         }
         else
@@ -450,14 +451,14 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
         {
           print "\nChecking https...Skipping! NODE NOT FOUND!";
           chomp($datetime_stamp_log = `date "+%m%d%Y_%H%M%S"`);
-          script_logger($datetime_stamp_log, $migtool_log, "$in_nodeline:node_pre_check:check_node_in_HPOM():NODE_NOT_FOUND");
+          script_logger($datetime_stamp_log, $migtool_log, "$in_nodeline:node_pre_check:check_node_in_HPOM():NOT_FOUND");
           next;
         }
         if(($r_check_node_in_HPOM[0] eq "1") && ($r_check_node_in_HPOM[3] =~ m/MACH_BBC_OTHER/))
         {
             print "\nChecking https...Skipping! NOT CONTROLLED NODE";
             chomp($datetime_stamp_log = `date "+%m%d%Y_%H%M%S"`);
-            script_logger($datetime_stamp_log, $migtool_log, "$in_nodeline:node_pre_check:check_node_in_HPOM():NODE_NOT_CONTROLLED");
+            script_logger($datetime_stamp_log, $migtool_log, "$in_nodeline:node_pre_check:check_node_in_HPOM():NOT_CONTROLLED");
             next;
         }
         if(($r_check_node_in_HPOM[0] eq "1") && ($r_check_node_in_HPOM[3] !~ m/MACH_BBC_OTHER/))
@@ -724,15 +725,15 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
               }
               if ($node_input_list)
               {
-                if ($in_nodename_ip eq "NODE_NOT_FOUND")
+                if ($in_nodename_ip eq "NOT_FOUND")
                 {
-                  $hash_check_value{$k_to_node_http_test} = "NODE_NOT_FOUND";
+                  $hash_check_value{$k_to_node_http_test} = "NOT_FOUND";
                 }
                 if ($in_nodename_mach_type =~ m/MACH_BBC_OTHER/)
                 {
-                  $hash_check_value{$k_to_node_http_test} = "NODE_NOT_CONTROLLED";
+                  $hash_check_value{$k_to_node_http_test} = "NOT_CONTROLLED";
                 }
-                if ($in_nodename_ip ne "NODE_NOT_FOUND" && $in_nodename_mach_type !~ m/MACH_BBC_OTHER/)
+                if ($in_nodename_ip ne "NOT_FOUND" && $in_nodename_mach_type !~ m/MACH_BBC_OTHER/)
                 {
                   $r_testOvdeploy_HpomToNode_383_local = testOvdeploy_HpomToNode_383($in_nodename_ip, "3000");
                   if ($r_testOvdeploy_HpomToNode_383_local eq "1")
@@ -763,15 +764,15 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
               }
               if ($node_input_list)
               {
-                if ($in_nodename_ip eq "NODE_NOT_FOUND")
+                if ($in_nodename_ip eq "NOT_FOUND")
                 {
-                  $hash_check_value{$k_to_node_https_test} = "NODE_NOT_FOUND";
+                  $hash_check_value{$k_to_node_https_test} = "NOT_FOUND";
                 }
                 if ($in_nodename_mach_type =~ m/MACH_BBC_OTHER/)
                 {
-                  $hash_check_value{$k_to_node_https_test} = "NODE_NOT_CONTROLLED";
+                  $hash_check_value{$k_to_node_https_test} = "NOT_CONTROLLED";
                 }
-                if ($in_nodename_ip ne "NODE_NOT_FOUND" && $in_nodename_mach_type !~ m/MACH_BBC_OTHER/)
+                if ($in_nodename_ip ne "NOT_FOUND" && $in_nodename_mach_type !~ m/MACH_BBC_OTHER/)
                 {
                   $r_testOvdeploy_HpomToNode_383_SSL_local = testOvdeploy_HpomToNode_383_SSL($in_nodename_ip, "3000");
                   if ($r_testOvdeploy_HpomToNode_383_SSL_local eq "1")
@@ -806,12 +807,12 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
               }
               if ($node_input_list)
               {
-                if ($in_nodename_ip eq "NODE_NOT_FOUND")
+                if ($in_nodename_ip eq "NOT_FOUND")
                 {
-                  $hash_check_value{$k_to_node_icmp_test} = "NODE_NOT_FOUND";
+                  $hash_check_value{$k_to_node_icmp_test} = "NOT_FOUND";
                 }
                 #If node has an IP and is found within HPOM
-                if ($in_nodename_ip ne "0.0.0.0" && $in_nodename_ip ne "NODE_NOT_FOUND")
+                if ($in_nodename_ip ne "0.0.0.0" && $in_nodename_ip ne "NOT_FOUND")
                 {
                   $r_test_icmp_to_node = test_icmp_to_node($in_nodename_ip);
                   if ($r_test_icmp_to_node eq "0")
@@ -838,19 +839,19 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
               }
               if ($node_input_list)
               {
-                if ($in_nodename_ip eq "NODE_NOT_FOUND")
+                if ($in_nodename_ip eq "NOT_FOUND")
                 {
-                  $hash_check_value{$k_to_node_oa_status} = "NODE_NOT_FOUND";
+                  $hash_check_value{$k_to_node_oa_status} = "NOT_FOUND";
                 }
                 if ($in_nodename_mach_type =~ m/MACH_BBC_OTHER/)
                 {
-                  $hash_check_value{$k_to_node_oa_status} = "NODE_NOT_CONTROLLED";
+                  $hash_check_value{$k_to_node_oa_status} = "NOT_CONTROLLED";
                 }
-                if ($in_nodename_ip ne "NODE_NOT_FOUND" && $in_nodename_mach_type !~ m/MACH_BBC_OTHER/)
+                if ($in_nodename_ip ne "NOT_FOUND" && $in_nodename_mach_type !~ m/MACH_BBC_OTHER/)
                 {
                   if ($already_tested_383 eq "0")
                   {
-                    if (($r_testOvdeploy_HpomToNode_383_SSL = testOvdeploy_HpomToNode_383_SSL($in_nodename, "3000")) eq "1")
+                    if (($r_testOvdeploy_HpomToNode_383_SSL = testOvdeploy_HpomToNode_383_SSL($in_nodename_ip, "3000")) eq "1")
                     {
                       $already_tested_383 = "1";
                     }
@@ -1626,7 +1627,7 @@ sub icmp_to_host_test
 sub oastatus
 {
   my ($nodename, $cmd_timeout) = @_;
-  my @oastatus_cmd = qx{ovdeploy -cmd \"opcragt -status $nodename\" -ovrg server};
+  my @oastatus_cmd = qx{ovdeploy -cmd \"opcragt -status $nodename\" -ovrg server -cmd_timeout $cmd_timeout};
   my $procs_ok = 0;
   foreach my $oastatus_cmd_line (@oastatus_cmd)
   {
