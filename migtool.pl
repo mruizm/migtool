@@ -214,9 +214,10 @@ if ($assign_ng)
       if($r_check_node_in_HPOM[0] eq "0")
       {
         #Node NOT FOUND
-        print "Node $nodename_assign NOT FOUND...SKIPPING!\n";
+        print "\nNode $nodename_assign NOT FOUND...SKIPPING!";
         chomp($datetime_stamp_log = `date "+%m%d%Y_%H%M%S"`);
         script_logger($datetime_stamp_log, $migtool_log, "$nodename_assign:node_pre_check_assign_ng:check_node_in_HPOM():NOT_FOUND");
+        next;
       }
       else
       {
@@ -224,19 +225,19 @@ if ($assign_ng)
         system("opcnode -list_groups | grep ^Name | cut -d'=' -f2 | grep -e \'^ $node_group_name\' > /dev/null");
         if ($? eq "0")
         {
-          print "$nodename_assign => \"$node_group_name\"";
+          print "\n$nodename_assign => \"$node_group_name\"";
           chomp($in_nodename_mach_type = $r_check_node_in_HPOM[2]);
           system("opcnode -assign_node group_name=\"$node_group_name\" node_name=$nodename_assign net_type=$in_nodename_mach_type > /dev/null");
           if ($? ne "0")
           {
-            print "\r$nodename_assign => \"$node_group_name\"...WARNING!\nNodegroup already assigned!\n";
+            print "\r$nodename_assign => \"$node_group_name\"...\nINFO: Nodegroup already assigned!";
             chomp($datetime_stamp_log = `date "+%m%d%Y_%H%M%S"`);
             script_logger($datetime_stamp_log, $migtool_log, "$nodename_assign:assign_ng:$node_group_name:NODEGROUP_ALREADY_ASSIGNED");
           }
         }
         else
         {
-          print "\r$nodename_assign => \"$node_group_name\"...WARNING!\nNodegroup NOT FOUND!\n";
+          print "\r$nodename_assign => \"$node_group_name\"...WARNING: Nodegroup NOT FOUND!\n";
           print "Want to create node group $node_group_name? (Y/N)";
           chomp(my $input_create_ng = <STDIN>);
           if($input_create_ng =~ m/YES|Y|y|NO|N|n/)
@@ -245,6 +246,15 @@ if ($assign_ng)
             if ($? eq "0")
             {
               print "Node group $node_group_name create successfully!\n"
+              #Assign node afterwards nodegroup was created
+              print "$nodename_assign => \"$node_group_name\"";
+              system("opcnode -assign_node group_name=\"$node_group_name\" node_name=$nodename_assign net_type=$in_nodename_mach_type > /dev/null");
+              if ($? ne "0")
+              {
+                print "\r$nodename_assign => \"$node_group_name\"...WARNING!\nNodegroup already assigned!";
+                chomp($datetime_stamp_log = `date "+%m%d%Y_%H%M%S"`);
+                script_logger($datetime_stamp_log, $migtool_log, "$nodename_assign:assign_ng:$node_group_name:NODEGROUP_ALREADY_ASSIGNED");
+              }
             }
             else
             {
@@ -257,7 +267,6 @@ if ($assign_ng)
         }
       }
     }
-    print "\n";
   }
   print "Error logfile: $migtool_log\n" if (!$test_comp_local);
 }
