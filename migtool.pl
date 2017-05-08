@@ -216,7 +216,7 @@ if ($assign_ng)
         #Node NOT FOUND
         print "\nNode $nodename_assign NOT FOUND...SKIPPING!";
         chomp($datetime_stamp_log = `date "+%m%d%Y_%H%M%S"`);
-        script_logger($datetime_stamp_log, $migtool_log, "$nodename_assign:node_pre_check_assign_ng:check_node_in_HPOM():NOT_FOUND");
+        script_logger($datetime_stamp_log, $migtool_log, "$nodename_assign:node_pre_check_assign_ng:check_node_in_HPOM():NODE_NOT_FOUND");
         next;
       }
       else
@@ -238,14 +238,16 @@ if ($assign_ng)
         else
         {
           print "\r$nodename_assign => \"$node_group_name\"...WARNING: Nodegroup NOT FOUND!\n";
+          chomp($datetime_stamp_log = `date "+%m%d%Y_%H%M%S"`);
+          script_logger($datetime_stamp_log, $migtool_log, "$nodename_assign:assign_ng:$node_group_name:NODEGROUP_NOT_FOUND");
           print "Want to create node group $node_group_name? (Y/N)";
           chomp(my $input_create_ng = <STDIN>);
-          if($input_create_ng =~ m/YES|Y|y|NO|N|n/)
+          if($input_create_ng =~ m/YES|Y|y/)
           {
             system("opcnode -add_group group_name=\"$node_group_name\" group_label=\"$node_group_name\" > /dev/null");
             if ($? eq "0")
             {
-              print "Node group $node_group_name create successfully!\n"
+              print "Node group $node_group_name create successfully!\n";
               #Assign node afterwards nodegroup was created
               print "$nodename_assign => \"$node_group_name\"";
               system("opcnode -assign_node group_name=\"$node_group_name\" node_name=$nodename_assign net_type=$in_nodename_mach_type > /dev/null");
@@ -262,8 +264,11 @@ if ($assign_ng)
               script_logger($datetime_stamp_log, $migtool_log, "$nodename_assign:assign_ng:$node_group_name:CANT_CREATE_NODEGROUP");
             }
           }
-          chomp($datetime_stamp_log = `date "+%m%d%Y_%H%M%S"`);
-          script_logger($datetime_stamp_log, $migtool_log, "$nodename_assign:assign_ng:$node_group_name:NODEGROUP_NOT_FOUND");
+          if($input_create_ng =~ m/NO|N|n/)
+          {
+            chomp($datetime_stamp_log = `date "+%m%d%Y_%H%M%S"`);
+            script_logger($datetime_stamp_log, $migtool_log, "$nodename_assign:assign_ng:$node_group_name:NODEGROUP_NOT_CREATED");
+          }
         }
       }
     }
@@ -460,7 +465,7 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
         {
           print "\nChecking https...Skipping! NODE NOT FOUND!";
           chomp($datetime_stamp_log = `date "+%m%d%Y_%H%M%S"`);
-          script_logger($datetime_stamp_log, $migtool_log, "$in_nodeline:node_pre_check:check_node_in_HPOM():NOT_FOUND");
+          script_logger($datetime_stamp_log, $migtool_log, "$in_nodeline:node_pre_check:check_node_in_HPOM():NODE_NOT_FOUND");
           next;
         }
         if(($r_check_node_in_HPOM[0] eq "1") && ($r_check_node_in_HPOM[3] =~ m/MACH_BBC_OTHER/))
