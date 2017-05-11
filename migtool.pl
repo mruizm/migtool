@@ -1,17 +1,18 @@
 #!/usr/bin/perl
 # Switches:
-#            assign_ng|-a                       #<---- completed - to make nodegroup assignment based on --dwn_ng_assign
-#            distrib_pols|-b                    #<---- completed - to distribute policies
-#            dwn_ng_assign|-c                   #<---- completed - to download nodegroup assignment
-#            hosts_entry|-d                     #<---- completed - to add hpom entries into node's hosts file
-#            local_test|-e 'http|https|icmp'    #<---- completed - to test 'http|https|icmp' from HPOM to managed node
-#            remote_test|-f                     #not yet implemented
-#            update_certs|-h                    #<---- completed - to update trusted certificates
-#            update_hpom_mgr|-i                 #<---- completed - to update agent hpom variables
+#            --assign_ng|-a                       #<---- completed - to make nodegroup assignment based on --dwn_ng_assign
+#            --distrib_pols|-b                    #<---- completed - to distribute policies
+#            --dwn_ng_assign|-c                   #<---- completed - to download nodegroup assignment
+#            --hosts_entry|-d                     #<---- completed - to add hpom entries into node's hosts file
+#            --local_test|-e 'http|https|icmp'    #<---- completed - to test 'http|https|icmp' from HPOM to managed node
+#            --pol_own|-f '<target_pri_hpom>'     #<---- in progress - to update managed node policy ownership
+#            --remote_test|-f                     #not yet implemented
+#            --update_certs|-h                    #<---- completed - to update trusted certificates
+#            --update_hpom_mgr|-i                 #<---- completed - to update agent hpom variables
 #            #complementary switches
-#            gen_node_list|-g                   #<---- completed - complementary switch to generate on the fly list of managed nodes
-#            mgmt_server|-m                     #<---- completed - complementary switch for input file with hpom host entries (hosts file like)
-#            node_input_list|-l                 #<---- completed - complementary switch to use input file with list of managed nodes
+#            --gen_node_list|-g                   #<---- completed - complementary switch to generate on the fly list of managed nodes
+#            --mgmt_server|-m                     #<---- completed - complementary switch for input file with hpom host entries (hosts file like)
+#            --node_input_list|-l                 #<---- completed - complementary switch to use input file with list of managed nodes
 
 use strict;
 use warnings;
@@ -87,6 +88,10 @@ my $vip_hpom_fqdn = '';
 my $ng_node_line = '';
 my $nodename_assign = '';
 my $node_group_name = '';
+########################################
+#Init of vars for $pol_own options
+my $pol_own = '';
+my $r_update_pol_own = '';
 ####################################
 #Init of script working paths
 my $migtool_dir = '/var/opt/OpC_local/MIGTOOL';
@@ -115,16 +120,17 @@ GetOptions( 'assign_ng|a=s' => \$assign_ng,                 #<---- completed - t
             'dwn_ng_assign|c' => \$dwn_ng_assign,           #<---- completed - to download nodegroup assignment
             'hosts_entry|d' => \$hosts_entry,               #<---- completed - to add hpom entries into node's hosts file
             'local_test|e=s' => \$test_comp_local,          #<---- completed - to test 'http|https|icmp' from HPOM to managed node
-            'remote_test|f' => \$test_comp_remote,          #not yet implemented
-            'update_certs|h' => \$update_certs,             #<---- completed - to update trusted certificates
-            'update_hpom_mgr|i' => \$update_hpom_mgr,       #<---- completed - to update agent hpom variables
+            'pol_own|f=s' => \$pol_own,                     #<---- in progress - to update managed node policy ownership
+            'remote_test|h' => \$test_comp_remote,          #not yet implemented
+            'update_certs|i' => \$update_certs,             #<---- completed - to update trusted certificates
+            'update_hpom_mgr|j' => \$update_hpom_mgr,       #<---- completed - to update agent hpom variables
             #complementary switches
             'gen_node_list|g' => \$gen_node_list,           #<---- completed - complementary switch to generate on the fly list of managed nodes
             'mgmt_server|m=s' => \$mgmt_server,             #<---- completed - complementary switch for input file with hpom host entries (hosts file like)
             'node_input_list|l=s' => \$node_input_list);    #<---- completed - complementary switch to use input file with list of managed nodes
 
 #If none of the mandatory options is defined
-if ((!$gen_node_list && !$node_input_list) && ($distrib_pols || $hosts_entry || $test_comp_local || $update_hpom_mgr))
+if ((!$gen_node_list && !$node_input_list) && ($distrib_pols || $hosts_entry || $test_comp_local || $update_hpom_mgr || $pol_own))
 #if ((!$gen_node_list && !$node_input_list) && (!$assign_ng))
 {
   print "\nAny of the options requires either one of the following parameters:\n";
@@ -277,7 +283,7 @@ if ($assign_ng)
 }
 
 #Switch to generate list of managed nodes
-if ($gen_node_list && (!$hosts_entry || !$distrib_pols || !$update_certs || !$update_hpom_mgr || !$assign_ng || !$test_comp_local || !$node_input_list))
+if ($gen_node_list && (!$hosts_entry || !$distrib_pols || !$update_certs || !$update_hpom_mgr || !$assign_ng || !$test_comp_local || !$node_input_list || !$pol_own))
 {
   print "\nGenerating node list...";
   gen_node_list($gen_node_list_file);
@@ -303,7 +309,7 @@ if ($test_comp_local)
   #  exit 0;
   #}
   #Switches that can't be used with --local_test|-t
-  if ($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr)
+  if ($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $pol_own)
   {
     print "Option \'--local_test|-e\' can\'t be used with any other option!\n\n";
     exit 0;
@@ -342,7 +348,7 @@ if ($test_comp_local)
   print "\rVerifying \'--local_test|-e\' parameters...PASSED!";
 }
 
-if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_comp_local || $dwn_ng_assign)
+if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_comp_local || $dwn_ng_assign || $pol_own)
 {
   #Validation of $mgmt_server input file
   if (($hosts_entry || $update_hpom_mgr) && $mgmt_server)
@@ -378,8 +384,8 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
     }
     print "\rChecking syntax of $mgmt_server file...PASSED!";
   }
-  #If '--hosts_entry|-a, ' defined but no --mgmt_server|-m <input_file>' defined
-  if (($hosts_entry || $update_hpom_mgr ) && !$mgmt_server)
+  #If '--hosts_entry|-a,' defined but no --mgmt_server|-m <input_file>' defined
+  if (($hosts_entry || $update_hpom_mgr) && !$mgmt_server)
   {
     if (!$mgmt_server)
     {
@@ -709,6 +715,48 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
           }
         }
       }
+      #Option to target HPOM take policy ownership
+      if ($pol_own)
+      {
+        print "\n-->Updating policy ownership for all managed node policies...";
+        print "\nChecking https...";
+        if ($already_tested_383 eq "0")
+        {
+          print "\rChecking https...TESTING";
+          if (($r_testOvdeploy_HpomToNode_383_SSL = testOvdeploy_HpomToNode_383_SSL($in_nodename, "3000")) eq "1")
+          {
+            $already_tested_383 = "1";
+          }
+          else
+          {
+            $already_tested_383 = "2";
+          }
+        }
+        if ($already_tested_383 eq "2")
+        {
+          print "\rChecking https...FAILED!";
+          chomp($datetime_stamp_log = `date "+%m%d%Y_%H%M%S"`);
+          script_logger($datetime_stamp_log, $migtool_log, "$in_nodename:pol_own_opt:pol_own():FAILED_383_HTTPS_TO_NODE");
+        }
+        if ($already_tested_383 eq "1")
+        {
+          print "\rChecking https...PASSED!";
+          print "\nUpdating policy ownership...";
+          $r_update_pol_own = update_pol_own($in_nodename, $pol_own, "3000");
+          #print "val: $r_update_cert\n";
+          if($r_update_pol_own eq "0")
+          {
+            print "\rUpdating policy ownership...COMPLETED!";
+          }
+          if($r_update_pol_own eq "1")
+          {
+            print "\rUpdating policy ownership...FAILED!";
+            chomp($datetime_stamp_log = `date "+%m%d%Y_%H%M%S"`);
+            script_logger($datetime_stamp_log, $migtool_log, "$in_nodename:pol_own_opt:pol_own():FAILED_POL_OWNERSHIP");
+          }
+        }
+      }
+
       if ($test_comp_local)
       {
         #$init_csv_line =~ m/(.*);(.*);(.*)/;
@@ -914,6 +962,7 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
           print "\n$scalar_test_header_values";
           csv_logger($csv_file, $scalar_test_header_values);
         }
+        $in_nodename =~ s/\s+//;
         csv_logger($csv_file, "$in_nodename,$in_nodename_ip,$in_nodename_mach_type,$scalar_test_return_values");
         print "\n$in_nodename,$in_nodename_ip,$in_nodename_mach_type,$scalar_test_return_values";
         $counter_iterations++;
@@ -1473,22 +1522,31 @@ sub update_hpom_mgr
   while(<INPUT_HPOM_FILE>)
   {
     chomp(my $input_line_mgr = $_);
-    if ($input_line_mgr =~ m/Primary_HPOM$/)
+    if ($input_line_mgr =~ m/Primary_HPOM_MIGTOOL$/)
     {
       $input_line_mgr =~ m/(.*)\s+?(.*)\s+?(.*)\s+?(.*)/;
       chomp($n_hpom_fqdn = $2);
+      #print "$n_hpom_fqdn\n";
       push(@arr_hpoms, $n_hpom_fqdn);
     }
-    if($input_line_mgr =~ m/VIP$/)
+    if($input_line_mgr =~ m/VIP_HPOM_MIGTOOL$/)
     {
       $input_line_mgr =~ m/(.*)\s+?(.*)\s+?(.*)\s+?(.*)/;
       chomp($n_hpom_fqdn = $2);
+      #print "$n_hpom_fqdn\n";
       push(@arr_hpoms, $n_hpom_fqdn);
     }
   }
   close(INPUT_HPOM_FILE);
+  my $size = @arr_hpoms;
+  if ($size < 1)
+  {
+    print "Please check input file for argument --mgmt_server\n";
+    exit 0;
+  }
   print "\nUpdating OPC_PRIMARY_MGR...\n";
   system("/opt/OV/bin/ovconfpar -change -host $nodename -ns eaagt -set OPC_PRIMARY_MGR $arr_hpoms[1] > /dev/null");
+  #print "/opt/OV/bin/ovconfpar -change -host $nodename -ns eaagt -set OPC_PRIMARY_MGR $arr_hpoms[1] > /dev/null\n";
   if ($? eq "0")
   {
     #print "\nUpdating OPC_PRIMARY_MGR within managed node...COMPLETED!\n";
@@ -1500,7 +1558,8 @@ sub update_hpom_mgr
     $r_commands[0] = "1";
   }
   print "Updating general_licmgr...\n";
-  system("/opt/OV/bin/ovconfpar -change -host $nodename -ns eaagt.lic. mgrs -set general_licmgr $arr_hpoms[0]");
+  system("/opt/OV/bin/ovconfpar -change -host $nodename -ns eaagt.lic.mgrs -set general_licmgr $arr_hpoms[0] > /dev/null");
+  #print "/opt/OV/bin/ovconfpar -change -host $nodename -ns eaagt.lic.mgrs -set general_licmgr $arr_hpoms[0]\n";
   if ($? eq "0")
   {
     #print "Updating general_licmgr...COMPLETED!\n";
@@ -1512,7 +1571,8 @@ sub update_hpom_mgr
     $r_commands[1] = "1";
   }
   print "Updating CERTIFICATE_SERVER...\n";
-  system("/opt/OV/bin/ovconfpar -change -host $nodename -ns sec.cm.client -set CERTIFICATE_SERVER $arr_hpoms[0]");
+  system("/opt/OV/bin/ovconfpar -change -host $nodename -ns sec.cm.client -set CERTIFICATE_SERVER $arr_hpoms[0] > /dev/null");
+  #print "/opt/OV/bin/ovconfpar -change -host $nodename -ns sec.cm.client -set CERTIFICATE_SERVER $arr_hpoms[0]\n";
   if ($? eq "0")
   {
     #print "Updating CERTIFICATE_SERVER...COMPLETED!\n";
@@ -1524,7 +1584,8 @@ sub update_hpom_mgr
     $r_commands[2] = "1";
   }
   print "Updating MANAGER...\n";
-  system("/opt/OV/bin/ovconfpar -change -host $nodename -ns sec.core.auth -set MANAGER $arr_hpoms[0]");
+  system("/opt/OV/bin/ovconfpar -change -host $nodename -ns sec.core.auth -set MANAGER $arr_hpoms[0] > /dev/null");
+  #print "/opt/OV/bin/ovconfpar -change -host $nodename -ns sec.core.auth -set MANAGER $arr_hpoms[0]\n";
   if ($? eq "0")
   {
     #print "Updating MANAGER...COMPLETED!\n";
@@ -1536,7 +1597,8 @@ sub update_hpom_mgr
     $r_commands[3] = "1";
   }
   print "Updating MANAGER_ID...\n";
-  system("/opt/OV/bin/ovconfpar -change -host $nodename -ns sec.core.auth -set MANAGER_ID \`ovcoreid -ovrg server\`");
+  system("/opt/OV/bin/ovconfpar -change -host $nodename -ns sec.core.auth -set MANAGER_ID \`ovcoreid -ovrg server\` > /dev/null");
+  #print "/opt/OV/bin/ovconfpar -change -host $nodename -ns sec.core.auth -set MANAGER_ID \`ovcoreid -ovrg server\`\n";
   if ($? eq "0")
   {
     #print "Updating MANAGER_ID...COMPLETED!\n";
@@ -1547,6 +1609,8 @@ sub update_hpom_mgr
     #print "Updating MANAGER_ID...FAILED!\n";
     $r_commands[4] = "1";
   }
+
+  #Target HPOM takes ownership of policies for a managed node if all agent updates were ok.
   return @r_commands;
 }
 
@@ -1600,22 +1664,22 @@ sub icmp_to_host_test
 	if ($node_mach_type =~ m/MACH_BBC_LX26|MACH_BBC_AIX/)
 	{
 		#print "Linux\n";
-		@icmp_result = qx{ovdeploy -cmd ping -par \"-c $icmp_packet_count -s  $icmp_packet_size $targethost\" -host $nodename -cmd_timeout $cmdtimeout};
+		@icmp_result = qx{/opt/OV/bin/ovdeploy -cmd ping -par \"-c $icmp_packet_count -s  $icmp_packet_size $targethost\" -host $nodename -cmd_timeout $cmdtimeout};
 	}
 	if ($node_mach_type =~ m/MACH_BBC_WIN/)
 	{
 		#print "Windows\n";
-		@icmp_result = qx{ovdeploy -cmd ping -par \"-n $icmp_packet_count -l  $icmp_packet_size $targethost\" -host $nodename -cmd_timeout $cmdtimeout};
+		@icmp_result = qx{/opt/OV/bin/ovdeploy -cmd ping -par \"-n $icmp_packet_count -l  $icmp_packet_size $targethost\" -host $nodename -cmd_timeout $cmdtimeout};
 	}
 	if ($node_mach_type =~ m/MACH_BBC_HPUX/)
 	{
 		#print "HPUX\n";
-		@icmp_result = qx{ovdeploy -cmd ping -par \"$targethost $icmp_packet_size -n $icmp_packet_count\" -host $nodename -cmd_timeout $cmdtimeout};
+		@icmp_result = qx{/opt/OV/bin/ovdeploy -cmd ping -par \"$targethost $icmp_packet_size -n $icmp_packet_count\" -host $nodename -cmd_timeout $cmdtimeout};
 	}
 	if ($node_mach_type =~ m/MACH_BBC_SOL/)
 	{
 		#print "SOL\n";
-		@icmp_result = qx{ovdeploy -cmd ping -par \"-s $targethost $icmp_packet_size $icmp_packet_count\" -host $nodename -cmd_timeout $cmdtimeout};
+		@icmp_result = qx{/opt/OV/bin/ovdeploy -cmd ping -par \"-s $targethost $icmp_packet_size $icmp_packet_count\" -host $nodename -cmd_timeout $cmdtimeout};
 	}
 
 	foreach my $icmp_line (@icmp_result)
@@ -1638,10 +1702,19 @@ sub icmp_to_host_test
 	return $icmp_result_porcentaje;
 }
 
+##########################################################
+# Sub that performs by ovdeploy an 'opcragt -status' to managed node
+#	@Parms:
+#			$nodename:		nodename
+#     $cmd_timeout: cmd timeout
+#	Return:
+#			0:	OK
+#			1:	Error
+###########################################################
 sub oastatus
 {
   my ($nodename, $cmd_timeout) = @_;
-  my @oastatus_cmd = qx{ovdeploy -cmd \"opcragt -status $nodename\" -ovrg server -cmd_timeout $cmd_timeout};
+  my @oastatus_cmd = qx{/opt/OV/bin/ovdeploy -cmd \"opcragt -status $nodename\" -ovrg server -cmd_timeout $cmd_timeout};
   my $procs_ok = 0;
   foreach my $oastatus_cmd_line (@oastatus_cmd)
   {
@@ -1652,6 +1725,27 @@ sub oastatus
     }
   }
   if ($procs_ok == 4)
+  {
+    return 0;
+  }
+  return 1;
+}
+
+##########################################################
+# Sub that performs the policy ownership
+#	@Parms:
+#			$nodename:		nodename
+#     $target_pri_hpom: hpom that will take policy ownership
+#	Return:
+#			0:	OK
+#			1:	Error
+###########################################################
+sub update_pol_own
+{
+  my ($nodename, $target_pri_hpom, $cmd_timeout) = @_;
+  system("/opt/OV/bin/ovdeploy -cmd \"ovpolicy -setowner OVO\:$target_pri_hpom -all\" -node $nodename -cmd_timeout $cmd_timeout > /dev/null");
+  #print "/opt/OV/bin/ovdeploy -cmd \"/opt/OV/bin/ovpolicy -setowner OVO\:$target_pri_hpom -all\" -ovrg server -cmd_timeout $cmd_timeout > /dev/null\n";
+  if ($? eq "0")
   {
     return 0;
   }
