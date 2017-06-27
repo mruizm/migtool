@@ -4,7 +4,7 @@
 #            distrib_pols|-b                    #<---- completed - to distribute policies
 #            dwn_ng_assign|-c                   #<---- completed - to download nodegroup assignment
 #            hosts_entry|-d                     #<---- completed - to add hpom entries into node's hosts file
-#            local_test|-e 'http|https|icmp'    #<---- completed - to test 'http|https|icmp' from HPOM to managed node
+#            local_test|-e 'http|https|icmp|oastatus'    #<---- completed - to test 'http|https|icmp' from HPOM to managed node
 #            remote_test|-f                     #not yet implemented
 #            update_certs|-h                    #<---- completed - to update trusted certificates
 #            update_hpom_mgr|-i                 #<---- completed - to update agent hpom variables
