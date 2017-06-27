@@ -1,3 +1,4 @@
+# v1.0.2
 #!/usr/bin/perl
 # Switches:
 #            --assign_ng|-a                       #<---- completed - to make nodegroup assignment based on --dwn_ng_assign
