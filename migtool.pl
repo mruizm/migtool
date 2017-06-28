@@ -1,4 +1,4 @@
-# v1.0.2
+# v1.0.3
 #!/usr/bin/perl
 # Switches:
 #            --assign_ng|-a                       #<---- completed - to make nodegroup assignment based on --dwn_ng_assign
@@ -14,7 +14,9 @@
 #            --gen_node_list|-g                   #<---- completed - complementary switch to generate on the fly list of managed nodes
 #            --mgmt_server|-m                     #<---- completed - complementary switch for input file with hpom host entries (hosts file like)
 #            --node_input_list|-l                 #<---- completed - complementary switch to use input file with list of managed nodes
-
+# Changelog:
+# -added filter for ip within --gen_node_list parm
+# 
 use strict;
 use warnings;
 use Getopt::Long;
