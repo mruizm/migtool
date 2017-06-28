@@ -14,9 +14,11 @@
 #            --gen_node_list|-g                   #<---- completed - complementary switch to generate on the fly list of managed nodes
 #            --mgmt_server|-m                     #<---- completed - complementary switch for input file with hpom host entries (hosts file like)
 #            --node_input_list|-l                 #<---- completed - complementary switch to use input file with list of managed nodes
+#            --filter '<string_pattern_a>|<string_pattern_b>|...'            #<---- in process - complementary switch to use with --gen_node_list to filter out nodes based
+#                                                                                   in certain node caracteristic (ip/domain/net_type/match_type/comm_type)
 # Changelog:
 # -added filter for ip within --gen_node_list parm
-# 
+#
 use strict;
 use warnings;
 use Getopt::Long;
@@ -35,6 +37,7 @@ my $mgmt_server = '';
 my $node_input_list = '';
 my $test_comp_local = '';
 my $test_comp_remote = '';
+my $filter_string = '';
 #########################
 #Init of vars while reading node list for options
 my $node_is_controlled = "0";
@@ -95,7 +98,11 @@ my $node_group_name = '';
 #Init of vars for $pol_own options
 my $pol_own = '';
 my $r_update_pol_own = '';
-####################################
+########################################
+#Init of vars for $final_node_list_input options
+my @splitted_filter_string = ();
+my @unique_filter_string = ();
+########################################
 #Init of script working paths
 my $migtool_dir = '/var/opt/OpC_local/MIGTOOL';
 my $migtool_node_list_dir = $migtool_dir.'/node_list';
@@ -130,7 +137,9 @@ GetOptions( 'assign_ng|a=s' => \$assign_ng,                 #<---- completed - t
             #complementary switches
             'gen_node_list|g' => \$gen_node_list,           #<---- completed - complementary switch to generate on the fly list of managed nodes
             'mgmt_server|m=s' => \$mgmt_server,             #<---- completed - complementary switch for input file with hpom host entries (hosts file like)
-            'node_input_list|l=s' => \$node_input_list);    #<---- completed - complementary switch to use input file with list of managed nodes
+            'node_input_list|l=s' => \$node_input_list,     #<---- completed - complementary switch to use input file with list of managed nodes
+            'filter|o=s' => \$filter_string);               #<---- in process - complementary switch to use with --gen_node_list to filter out nodes based
+            #                                                      in certain node caracteristic (ip/domain/net_type/match_type/comm_type)
 
 #If none of the mandatory options is defined
 if ((!$gen_node_list && !$node_input_list) && ($distrib_pols || $hosts_entry || $test_comp_local || $update_hpom_mgr || $pol_own))
@@ -288,8 +297,16 @@ if ($assign_ng)
 #Switch to generate list of managed nodes
 if ($gen_node_list && (!$hosts_entry || !$distrib_pols || !$update_certs || !$update_hpom_mgr || !$assign_ng || !$test_comp_local || !$node_input_list || !$pol_own))
 {
+  if ($filter_string)
+  {
+    #Validates that the options entered in --local_test are unique and are contained in the the available ones
+    print "\nFilters to evaluate: ".join(' ', split(/\|/, $filter_string));
+    @splitted_filter_string = split(/\|/, $filter_string);
+    print "\nRemoving duplicate parameters if found...";
+    @unique_filter_string = do { my %seen; grep { !$seen{$_}++ } @splitted_filter_string };
+  }
   print "\nGenerating node list...";
-  gen_node_list($gen_node_list_file);
+  gen_node_list($gen_node_list_file, \@unique_filter_string);
   if (!-f $gen_node_list_file)
   {
     print "\rGenerating list of nodes...FAILED!";
@@ -317,6 +334,7 @@ if ($test_comp_local)
     print "Option \'--local_test|-e\' can\'t be used with any other option!\n\n";
     exit 0;
   }
+  #Validates that the options entered in --local_test are unique and are contained in the the available ones
   print "\nAudit parms to evaluate: ".join(' ', split(/\|/, $test_comp_local));
   @splitted_check_comps = split(/\|/, $test_comp_local);
   print "\nRemoving duplicate parameters if found...";
