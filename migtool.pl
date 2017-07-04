@@ -1086,7 +1086,7 @@ sub gen_node_list
       {
         if ($opcnode_cmd_mach_type_line =~ m/^Name\s+=\s+(.*)/)
         {
-          print "Filter value: $filter_val\n";
+          #print "Filter value: $filter_val\n";
           chomp($node_name = $1);
           print "$filter_val = $node_name\n";
           if ($node_name =~ m/$filter_val/)
@@ -1097,7 +1097,7 @@ sub gen_node_list
         }
         if ($opcnode_cmd_mach_type_line =~ m/^IP-Address\s+=\s+(.*)/)
         {
-          print "Filter value: $filter_val\n";
+          #print "Filter value: $filter_val\n";
           chomp($node_ip = $1);
           print "$filter_val = $node_ip\n";
           if ($node_ip =~ m/$filter_val/)
@@ -1108,7 +1108,7 @@ sub gen_node_list
         }
         if ($opcnode_cmd_mach_type_line =~ m/^Machine Type\s+=\s+(.*)/)
         {
-          print "Filter value: $filter_val\n";
+          #print "Filter value: $filter_val\n";
           chomp($node_mach_type = $1);
           print "$filter_val = $node_mach_type\n";
           if ($node_mach_type =~ m/$filter_val/)
