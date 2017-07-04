@@ -14,7 +14,7 @@
 #            --gen_node_list|-g                   #<---- completed - complementary switch to generate on the fly list of managed nodes
 #            --mgmt_server|-m                     #<---- completed - complementary switch for input file with hpom host entries (hosts file like)
 #            --node_input_list|-l                 #<---- completed - complementary switch to use input file with list of managed nodes
-#            --filter '<string_pattern_a>|<string_pattern_b>|...'            #<---- in process - complementary switch to use with --gen_node_list to filter out nodes based
+#            --filter '<string_pattern_a>|<string_pattern_b>|...'            #<---- completed - complementary switch to use with --gen_node_list to filter out nodes based
 #                                                                                   in certain node caracteristic (nodename, ip address, machine type)
 # Changelog:
 # -added filter for ip within --gen_node_list parm
@@ -1071,6 +1071,13 @@ sub gen_node_list
   my $node_ip = "";
   my $node_mach_type = "";
   my $node_skipped = "0";
+  my $end_ok_node_details = "0";
+
+  #If passed filter arary is null
+  if(!@filter_arr)
+  {
+    @filter_arr = qw/\"\"/;
+  }
 
   open (MYFILE, ">> $out_managed_node_file")
    or die("File not found: $out_managed_node_file");
@@ -1084,6 +1091,7 @@ sub gen_node_list
       #Loops through all the filters passed by parameter
       foreach my $filter_val (@filter_arr)
       {
+        chomp($filter_val);
         if ($opcnode_cmd_mach_type_line =~ m/^Name\s+=\s+(.*)/)
         {
           #print "Filter value: $filter_val\n";
@@ -1092,7 +1100,7 @@ sub gen_node_list
           if ($node_name =~ m/$filter_val/)
           {
             $node_skipped = "1";
-            #print "Node skipped due filterer match!";
+            #print "Node skipped due filterer match!\n";
           }
         }
         if ($opcnode_cmd_mach_type_line =~ m/^IP-Address\s+=\s+(.*)/)
@@ -1103,35 +1111,39 @@ sub gen_node_list
           if ($node_ip =~ m/$filter_val/)
           {
             $node_skipped = "1";
-            #print "Node skipped due filterer match!";
+            #print "Node skipped due filterer match!\n";
           }
         }
         if ($opcnode_cmd_mach_type_line =~ m/^Machine Type\s+=\s+(.*)/)
         {
+          $end_ok_node_details = "1";
           #print "Filter value: $filter_val\n";
           chomp($node_mach_type = $1);
           #print "$filter_val = $node_mach_type\n";
           if ($node_mach_type =~ m/$filter_val/)
           {
             $node_skipped = "1";
-            #print "Node skipped due filterer match!";
+            #print "Node skipped due filterer match!\n";
           }
-        }
-        if ($node_name && $node_ip && $node_mach_type)
-        {
-          #print "$node_name;$node_ip;$node_mach_type\n";
-          #print MYFILE "$node_name;$node_ip;$node_mach_type\n";
-          if ($node_skipped ne "1")
-          {
-            print MYFILE "$node_name\n";
-          }
-          $node_name = '';
-          $node_ip = '';
-          $node_mach_type = '';
-          $node_skipped = "0";
         }
       }
+      if ($node_name && $node_ip && $node_mach_type)
+      {
+        #print "$node_name;$node_ip;$node_mach_type\n";
+        #print MYFILE "$node_name;$node_ip;$node_mach_type\n";
+        #print "node_skipped=$node_skipped\n";
+        if ($node_skipped eq "0" && $end_ok_node_details eq "1")
+        {
+          #print "$node_name\n";
+          print MYFILE "$node_name\n";
+        }
+        $node_name = '';
+        $node_ip = '';
+        $node_mach_type = '';
+        $node_skipped = "0";
+      }
     }
+    $end_ok_node_details = "0";
   }
   close (MYFILE);
 }
