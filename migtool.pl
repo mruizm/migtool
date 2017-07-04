@@ -1088,7 +1088,7 @@ sub gen_node_list
         {
           #print "Filter value: $filter_val\n";
           chomp($node_name = $1);
-          print "$filter_val = $node_name\n";
+          #print "$filter_val = $node_name\n";
           if ($node_name =~ m/$filter_val/)
           {
             $node_skipped = "1";
@@ -1099,7 +1099,7 @@ sub gen_node_list
         {
           #print "Filter value: $filter_val\n";
           chomp($node_ip = $1);
-          print "$filter_val = $node_ip\n";
+          #print "$filter_val = $node_ip\n";
           if ($node_ip =~ m/$filter_val/)
           {
             $node_skipped = "1";
@@ -1110,7 +1110,7 @@ sub gen_node_list
         {
           #print "Filter value: $filter_val\n";
           chomp($node_mach_type = $1);
-          print "$filter_val = $node_mach_type\n";
+          #print "$filter_val = $node_mach_type\n";
           if ($node_mach_type =~ m/$filter_val/)
           {
             $node_skipped = "1";
