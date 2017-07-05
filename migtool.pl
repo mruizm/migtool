@@ -1,4 +1,4 @@
-# v1.0.3
+# v1.0.4
 #!/usr/bin/perl
 # Switches:
 #            --assign_ng|-a                       #<---- completed - to make nodegroup assignment based on --dwn_ng_assign
@@ -18,6 +18,7 @@
 #                                                                                   in certain node caracteristic (nodename, ip address, machine type)
 # Changelog:
 # -added filter for ip within --gen_node_list parm
+# -added switch to create DSF file based on an input node list file
 #
 use strict;
 use warnings;
