@@ -17,8 +17,9 @@
 #            --filter '<string_pattern_a>|<string_pattern_b>|...'            #<---- completed - complementary switch to use with --gen_node_list to filter out nodes based
 #                                                                                   in certain node caracteristic (nodename, ip address, machine type)
 # Changelog:
-# -added filter for ip within --gen_node_list parm
-# -added switch to create DSF file based on an input node list file
+# v1.03 -added filter for ip within --gen_node_list parm
+# v1.04 -changed file generated with --gen_node_list (ip;nodename;machine_type)
+# v1.04 -added switch to create DSF file based on an input node list file
 #
 use strict;
 use warnings;
@@ -1817,6 +1818,28 @@ sub update_pol_own
   my ($nodename, $target_pri_hpom, $cmd_timeout) = @_;
   system("/opt/OV/bin/ovdeploy -cmd \"ovpolicy -setowner OVO\:$target_pri_hpom -all\" -node $nodename -cmd_timeout $cmd_timeout > /dev/null");
   #print "/opt/OV/bin/ovdeploy -cmd \"/opt/OV/bin/ovpolicy -setowner OVO\:$target_pri_hpom -all\" -ovrg server -cmd_timeout $cmd_timeout > /dev/null\n";
+  if ($? eq "0")
+  {
+    return 0;
+  }
+  return 1;
+}
+
+##########################################################
+# Sub that generates dsf file to make managed node download
+#	@Parms:
+#			$nodename:		nodename
+#     $nodeip:      nodeip
+#     $dsf_filename: file used to add entities for downloading
+#	Return:
+#			0:	OK
+#			1:	Error
+###########################################################
+sub generate_dsf_file
+{
+  my ($nodename, $nodeip, $dsf_filename) = @_;
+  open(INPUT_HPOM_FILE, "< $dsf_filename")
+#print "/opt/OV/bin/ovdeploy -cmd \"/opt/OV/bin/ovpolicy -setowner OVO\:$target_pri_hpom -all\" -ovrg server -cmd_timeout $cmd_timeout > /dev/null\n";
   if ($? eq "0")
   {
     return 0;
