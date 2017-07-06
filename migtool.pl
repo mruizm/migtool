@@ -452,19 +452,24 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
     $node_is_controlled = "0";
     $already_tested_383 = "0";
     chomp($in_nodeline = $_);
+    $in_nodeline =~ m/(.*);(.*);(.*)/;
+    chomp($in_nodename = $1);
+    chomp($in_nodename_ip = $2);
+    chomp($in_nodename_mach_type = $3);
     if ($gen_node_list)
     {
-      $in_nodeline =~ m/(.*);(.*);(.*)/;
       $init_csv_line = $in_nodeline;
-      chomp($in_nodename = $1);
-      chomp($in_nodename_ip = $2);
-      chomp($in_nodename_mach_type = $3);
-
+      #chomp($in_nodename = $1);
+      #chomp($in_nodename_ip = $2);
+      #chomp($in_nodename_mach_type = $3);
     }
     #If '--node_input_list|-l <input_file>' defined scripts makes and initial check of the managed node to whether if found or not
     if ($node_input_list)
     {
-      chomp($in_nodename = $in_nodeline);
+      #chomp($in_nodename = $1);
+      #chomp($in_nodename_ip = $2);
+      #chomp($in_nodename_mach_type = $3);
+      $in_nodeline = $in_nodename;
       @r_check_node_in_HPOM = check_node_in_HPOM($in_nodeline);
       if ($test_comp_local)
       {
@@ -476,12 +481,12 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
           #$init_csv_line = "$in_nodename;NOT_FOUND";
           #print "$init_csv_line\n";
         }
-        else
-        {
+        #else
+        #{
           #chomp($in_nodename = $in_nodeline);
-          chomp($in_nodename_ip = $r_check_node_in_HPOM[1]);
-          chomp($in_nodename_mach_type = $r_check_node_in_HPOM[3]);
-        }
+          #chomp($in_nodename_ip = $r_check_node_in_HPOM[1]);
+          #chomp($in_nodename_mach_type = $r_check_node_in_HPOM[3]);
+        #}
       }
       if (!$test_comp_local)
       {
@@ -496,18 +501,18 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
           script_logger($datetime_stamp_log, $migtool_log, "$in_nodeline:node_pre_check:check_node_in_HPOM():NODE_NOT_FOUND");
           next;
         }
-        if(($r_check_node_in_HPOM[0] eq "1") && ($r_check_node_in_HPOM[3] =~ m/MACH_BBC_OTHER/))
+        if(($r_check_node_in_HPOM[0] eq "1") && ($in_nodename_mach_type =~ m/MACH_BBC_OTHER/))
         {
             print "\nChecking https...Skipping! NOT CONTROLLED NODE";
             chomp($datetime_stamp_log = `date "+%m%d%Y_%H%M%S"`);
             script_logger($datetime_stamp_log, $migtool_log, "$in_nodeline:node_pre_check:check_node_in_HPOM():NOT_CONTROLLED");
             next;
         }
-        if(($r_check_node_in_HPOM[0] eq "1") && ($r_check_node_in_HPOM[3] !~ m/MACH_BBC_OTHER/))
+        if(($r_check_node_in_HPOM[0] eq "1") && ($in_nodename_mach_type !~ m/MACH_BBC_OTHER/))
         {
           $node_is_controlled = "1";
-          chomp($in_nodename_ip = $r_check_node_in_HPOM[1]);
-          chomp($in_nodename_mach_type = $r_check_node_in_HPOM[3]);
+          #chomp($in_nodename_ip = $r_check_node_in_HPOM[1]);
+          #chomp($in_nodename_mach_type = $r_check_node_in_HPOM[3]);
         }
       }
     }
@@ -1098,9 +1103,11 @@ sub gen_node_list
           #print "Filter value: $filter_val\n";
           chomp($node_name = $1);
           #print "$filter_val = $node_name\n";
-          if ($node_name =~ m/$filter_val/)
+          #added condition to match nodes host-like valid character
+          if (($node_name =~ m/$filter_val/) || ($node_name !~ m/^[\w\d\-_\.]+$/))
           {
             $node_skipped = "1";
+            #print "\nSkipped $node_name";
             #print "Node skipped due filterer match!\n";
           }
         }
@@ -1136,7 +1143,7 @@ sub gen_node_list
         if ($node_skipped eq "0" && $end_ok_node_details eq "1")
         {
           #print "$node_name\n";
-          print MYFILE "$node_name\n";
+          print MYFILE "$node_name;$node_ip;$node_mach_type\n";
         }
         $node_name = '';
         $node_ip = '';
