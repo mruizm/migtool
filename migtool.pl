@@ -1864,13 +1864,19 @@ sub update_pol_own
 sub generate_dsf_file
 {
   my ($nodename, $nodeip, $input_file, $dsf_file_path_location, $date_time) = @_;
+  my ($node_name, $node_ip, $node_mach_type) = '';
   open(INPUT_HPOM_FILE, "< $input_file")
     or die "Can't open file $dsf_filename!\n";
   open(DSF_OUT_FILE, ">> $dsf_file_path_location/dsf_download.$date_time.dsf")
     or die "Can't write to file $dsf_file_path_location/dsf_download.$date_time.dsf!\n";
   while(<INPUT_HPOM_FILE>)
   {
-    print DSF_OUT_FILE "NODE IP $nodeip \"$nodename\"\;\n";
+    chomp(my $input_line = $_);
+    $input_line =~ m/(.*);(.*);(.*)/;
+    chomp($node_name = $1);
+    chomp($node_ip = $2);
+    chomp($node_mach_type = $3);
+    print DSF_OUT_FILE "NODE IP $node_ip \"$node_name\"\;\n";
   }
   close(INPUT_HPOM_FILE);
 }
