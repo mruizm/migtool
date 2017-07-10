@@ -337,7 +337,8 @@ if ($create_dsf_file && (!$hosts_entry || !$distrib_pols || !$update_certs || !$
   #when the node input file is defined
   if($node_input_list)
   {
-
+    my $dsf_file_name = generate_dsf_file($final_node_list_input, $migtool_dsf_dir, $datetime_stamp);
+    print "DSF file generated: $migtool_dsf_dir/$dsf_file_name\n";
   }
   else
   {
@@ -1856,19 +1857,19 @@ sub update_pol_own
 #     $nodeip:      nodeip
 #     $input_file: input file in csv format (ip;node_fqdn;machine_type)
 #	Return:
-#			0:	OK
-#			1:	Error
+#			$dsf_file_name_out : name of file generated.
 # DSF line for node specific:
 #   NODE IP 130.175.211.34 "usaadsavgmdev08.hpompe.corp.pe.ssn.hp.com";
 ###########################################################
 sub generate_dsf_file
 {
-  my ($nodename, $nodeip, $input_file, $dsf_file_path_location, $date_time) = @_;
+  my ($input_file, $dsf_file_path_location, $date_time) = @_;
   my ($node_name, $node_ip, $node_mach_type) = '';
+  my $dsf_file_name_out = "dsf_download.$date_time.dsf";
   open(INPUT_HPOM_FILE, "< $input_file")
-    or die "Can't open file $dsf_filename!\n";
-  open(DSF_OUT_FILE, ">> $dsf_file_path_location/dsf_download.$date_time.dsf")
-    or die "Can't write to file $dsf_file_path_location/dsf_download.$date_time.dsf!\n";
+    or die "Can't open file $input_file!\n";
+  open(DSF_OUT_FILE, ">> $dsf_file_path_location/$dsf_file_name_out")
+    or die "Can't write to file $dsf_file_path_location/$dsf_file_name_out!\n";
   while(<INPUT_HPOM_FILE>)
   {
     chomp(my $input_line = $_);
@@ -1879,4 +1880,5 @@ sub generate_dsf_file
     print DSF_OUT_FILE "NODE IP $node_ip \"$node_name\"\;\n";
   }
   close(INPUT_HPOM_FILE);
+  return $dsf_file_name_out;
 }
