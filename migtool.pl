@@ -7,14 +7,15 @@
 #            --hosts_entry|-d                     #<---- completed - to add hpom entries into node's hosts file
 #            --local_test|-e 'http|https|icmp|oastatus'    #<---- completed - to test 'http|https|icmp' from HPOM to managed node
 #            --pol_own|-f '<target_pri_hpom>'     #<---- in progress - to update managed node policy ownership
-#            --remote_test|-f                     #not yet implemented
-#            --update_certs|-h                    #<---- completed - to update trusted certificates
-#            --update_hpom_mgr|-i                 #<---- completed - to update agent hpom variables
+#            --remote_test|-h                     #not yet implemented
+#            --update_certs|-i                    #<---- completed - to update trusted certificates
+#            --update_hpom_mgr|-j                 #<---- completed - to update agent hpom variables
+#            --create_dsf|-k
 #            #complementary switches
 #            --gen_node_list|-g                   #<---- completed - complementary switch to generate on the fly list of managed nodes
 #            --mgmt_server|-m                     #<---- completed - complementary switch for input file with hpom host entries (hosts file like)
 #            --node_input_list|-l                 #<---- completed - complementary switch to use input file with list of managed nodes
-#            --filter '<string_pattern_a>|<string_pattern_b>|...'            #<---- completed - complementary switch to use with --gen_node_list to filter out nodes based
+#            --filter|-n '<string_pattern_a>|<string_pattern_b>|...'            #<---- completed - complementary switch to use with --gen_node_list to filter out nodes based
 #                                                                                   in certain node caracteristic (nodename, ip address, machine type)
 # Changelog:
 # v1.03 -added filter for ip within --gen_node_list parm
@@ -40,6 +41,7 @@ my $node_input_list = '';
 my $test_comp_local = '';
 my $test_comp_remote = '';
 my $filter_string = '';
+my $create_dsf_file = '';
 #########################
 #Init of vars while reading node list for options
 my $node_is_controlled = "0";
@@ -101,6 +103,9 @@ my $node_group_name = '';
 my $pol_own = '';
 my $r_update_pol_own = '';
 ########################################
+#Init of vars for $create_dsf_file option
+#my $create_dsf_file = '';
+########################################
 #Init of vars for $final_node_list_input options
 my @splitted_filter_string = ();
 my @unique_filter_string = ();
@@ -136,6 +141,7 @@ GetOptions( 'assign_ng|a=s' => \$assign_ng,                 #<---- completed - t
             'remote_test|h' => \$test_comp_remote,          #not yet implemented
             'update_certs|i' => \$update_certs,             #<---- completed - to update trusted certificates
             'update_hpom_mgr|j' => \$update_hpom_mgr,       #<---- completed - to update agent hpom variables
+            'create_dsf|k' => \$create_dsf_file
             #complementary switches
             'gen_node_list|g' => \$gen_node_list,           #<---- completed - complementary switch to generate on the fly list of managed nodes
             'mgmt_server|m=s' => \$mgmt_server,             #<---- completed - complementary switch for input file with hpom host entries (hosts file like)
@@ -1834,15 +1840,14 @@ sub update_pol_own
 #	Return:
 #			0:	OK
 #			1:	Error
+# DSF line for node specific:
+#   NODE IP 130.175.211.34 "usaadsavgmdev08.hpompe.corp.pe.ssn.hp.com";
 ###########################################################
 sub generate_dsf_file
 {
   my ($nodename, $nodeip, $dsf_filename) = @_;
   open(INPUT_HPOM_FILE, "< $dsf_filename")
-#print "/opt/OV/bin/ovdeploy -cmd \"/opt/OV/bin/ovpolicy -setowner OVO\:$target_pri_hpom -all\" -ovrg server -cmd_timeout $cmd_timeout > /dev/null\n";
-  if ($? eq "0")
-  {
-    return 0;
-  }
-  return 1;
+    or die "Can't write to file $dsf_filename!\n";
+  print INPUT_HPOM_FILE "NODE IP $nodeip \"$nodename\"\;\n";
+  close(INPUT_HPOM_FILE);
 }
