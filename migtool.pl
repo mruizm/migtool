@@ -117,6 +117,7 @@ my $migtool_log_dir = $migtool_dir.'/log';
 my $migtool_tmp_dir = $migtool_dir.'/tmp';
 my $migtool_csv_dir = $migtool_dir.'/csv';
 my $migtool_sql_dir = $migtool_dir.'/sql';
+my $migtool_dsf_dir = $migtool_dir.'/dsf';
 chomp(my $datetime_stamp = `date "+%m%d%Y_%H%M%S"`);
 my $gen_node_list_file = $migtool_node_list_dir.'/managed_node_list.'.$datetime_stamp.'.lst';
 my $csv_file = $migtool_csv_dir.'/node_tests.'.$datetime_stamp.'.csv';
@@ -130,6 +131,7 @@ system("mkdir -p $migtool_log_dir") if (!-d $migtool_log_dir);
 system("mkdir -p $migtool_tmp_dir") if (!-d $migtool_tmp_dir);
 system("mkdir -p $migtool_csv_dir") if (!-d $migtool_csv_dir);
 system("mkdir -p $migtool_sql_dir") if (!-d $migtool_sql_dir);
+system("mkdir -p $migtool_dsf_dir") if (!-d $migtool_dsf_dir);
 
 #Definition of all available options within script
 GetOptions( 'assign_ng|a=s' => \$assign_ng,                 #<---- completed - to make nodegroup assignment based on --dwn_ng_assign
@@ -141,16 +143,16 @@ GetOptions( 'assign_ng|a=s' => \$assign_ng,                 #<---- completed - t
             'remote_test|h' => \$test_comp_remote,          #not yet implemented
             'update_certs|i' => \$update_certs,             #<---- completed - to update trusted certificates
             'update_hpom_mgr|j' => \$update_hpom_mgr,       #<---- completed - to update agent hpom variables
-            'create_dsf|k' => \$create_dsf_file
+            'create_dsf|n' => \$create_dsf_file
             #complementary switches
             'gen_node_list|g' => \$gen_node_list,           #<---- completed - complementary switch to generate on the fly list of managed nodes
             'mgmt_server|m=s' => \$mgmt_server,             #<---- completed - complementary switch for input file with hpom host entries (hosts file like)
             'node_input_list|l=s' => \$node_input_list,     #<---- completed - complementary switch to use input file with list of managed nodes
-            'filter|o=s' => \$filter_string);               #<---- in process - complementary switch to use with --gen_node_list to filter out nodes based
-            #                                                      in certain node caracteristic (ip/domain/net_type/match_type/comm_type)
+            'filter|k=s' => \$filter_string);               #<---- in process - complementary switch to use with --gen_node_list to filter out nodes based
+                                                            #      in certain node caracteristic (ip/domain/net_type/match_type/comm_type)
 
 #If none of the mandatory options is defined
-if ((!$gen_node_list && !$node_input_list) && ($distrib_pols || $hosts_entry || $test_comp_local || $update_hpom_mgr || $pol_own))
+if ((!$gen_node_list && !$node_input_list) && ($distrib_pols || $hosts_entry || $test_comp_local || $update_hpom_mgr || $pol_own || $create_dsf_file))
 #if ((!$gen_node_list && !$node_input_list) && (!$assign_ng))
 {
   print "\nAny of the options requires either one of the following parameters:\n";
@@ -303,7 +305,7 @@ if ($assign_ng)
 }
 
 #Switch to generate list of managed nodes
-if ($gen_node_list && (!$hosts_entry || !$distrib_pols || !$update_certs || !$update_hpom_mgr || !$assign_ng || !$test_comp_local || !$node_input_list || !$pol_own))
+if ($gen_node_list && (!$hosts_entry || !$distrib_pols || !$update_certs || !$update_hpom_mgr || !$assign_ng || !$test_comp_local || !$node_input_list || !$pol_own || !$create_dsf_file))
 {
   if ($filter_string)
   {
@@ -328,6 +330,21 @@ if ($gen_node_list && (!$hosts_entry || !$distrib_pols || !$update_certs || !$up
     $final_node_list_input = $gen_node_list_file;
   }
 }
+
+#Switch that generates DSF file based on a managed node input file
+if ($create_dsf_file && (!$hosts_entry || !$distrib_pols || !$update_certs || !$update_hpom_mgr || !$assign_ng || !$test_comp_local || !$node_input_list || !$pol_own || !$create_dsf_file))
+{
+  #when the node input file is defined
+  if($node_input_list)
+  {
+
+  }
+  else
+  {
+    print "Option needs parameter --node_input_list|-l <input_file>\n\n";
+    exit 0;
+  }
+}
 #Switch to test 'https|http|ping' from hpom to managed node
 if ($test_comp_local)
 {
@@ -337,7 +354,7 @@ if ($test_comp_local)
   #  exit 0;
   #}
   #Switches that can't be used with --local_test|-t
-  if ($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $pol_own)
+  if ($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $pol_own || $create_dsf_file)
   {
     print "Option \'--local_test|-e\' can\'t be used with any other option!\n\n";
     exit 0;
@@ -377,9 +394,10 @@ if ($test_comp_local)
   print "\rVerifying \'--local_test|-e\' parameters...PASSED!";
 }
 
+#Switches that use hpom fqdn input file
 if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_comp_local || $dwn_ng_assign || $pol_own)
 {
-  #Validation of $mgmt_server input file
+  #Validation of $mgmt_server input file ($mgmt_server)
   if (($hosts_entry || $update_hpom_mgr) && $mgmt_server)
   {
     print "\nChecking syntax of $mgmt_server file...";
@@ -790,7 +808,7 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
           }
         }
       }
-
+      #Option to make test for http|https|icmp|oa from hpom->node direction
       if ($test_comp_local)
       {
         #$init_csv_line =~ m/(.*);(.*);(.*)/;
@@ -1836,7 +1854,7 @@ sub update_pol_own
 #	@Parms:
 #			$nodename:		nodename
 #     $nodeip:      nodeip
-#     $dsf_filename: file used to add entities for downloading
+#     $input_file: input file in csv format (ip;node_fqdn;machine_type)
 #	Return:
 #			0:	OK
 #			1:	Error
@@ -1845,9 +1863,14 @@ sub update_pol_own
 ###########################################################
 sub generate_dsf_file
 {
-  my ($nodename, $nodeip, $dsf_filename) = @_;
-  open(INPUT_HPOM_FILE, "< $dsf_filename")
-    or die "Can't write to file $dsf_filename!\n";
-  print INPUT_HPOM_FILE "NODE IP $nodeip \"$nodename\"\;\n";
+  my ($nodename, $nodeip, $input_file, $dsf_file_path_location, $date_time) = @_;
+  open(INPUT_HPOM_FILE, "< $input_file")
+    or die "Can't open file $dsf_filename!\n";
+  open(DSF_OUT_FILE, ">> $dsf_file_path_location/dsf_download.$date_time.dsf")
+    or die "Can't write to file $dsf_file_path_location/dsf_download.$date_time.dsf!\n";
+  while(<INPUT_HPOM_FILE>)
+  {
+    print DSF_OUT_FILE "NODE IP $nodeip \"$nodename\"\;\n";
+  }
   close(INPUT_HPOM_FILE);
 }
