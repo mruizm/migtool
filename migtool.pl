@@ -21,6 +21,7 @@
 # v1.03 -added filter for ip within --gen_node_list parm
 # v1.04 -changed file generated with --gen_node_list (ip;nodename;machine_type)
 # v1.04 -added switch to create DSF file based on an input node list file
+# v1.04 -improved routine for --dwn_ng_assign now using an input csv input file
 #
 use strict;
 use warnings;
@@ -223,8 +224,9 @@ if ($dwn_ng_assign)
     exit 0;
   }
   print "\nDownloading assignment of nodegroups for managed nodes...";
+  print "\nGenerating filename: $migtool_sql_dir/ng_download.$datetime_stamp.out\n\n";
   $r_node_input_list = download_ng_assignment($node_input_list, $mgmt_server, $migtool_sql_dir, $datetime_stamp);
-  print "\nFilename: $r_node_input_list\n\n";
+  print "Completed!\n\n";
   #system("/opt/OV/bin/OpC/call_sqlplus.sh Nodegroup-Overview | grep -ve \"$pri_hpom_fqdn\" -ve \"$sec_hpom_fqdn\" -ve \"$vip_hpom_fqdn\" | tee -a $migtool_sql_dir/node_2_nodegroup.$datetime_stamp.log > /dev/null");
   exit 0;
 }
@@ -1903,17 +1905,20 @@ sub download_ng_assignment
   my ($node_name, $node_ip, $node_mach_type, $mgmt_server) = '';
   my $ng_assign_file_name_out = "ng_download.$date_time.out";
   my @sql_ng_assign = ();
+  my $routine_node_counter = "0";
   open(INPUT_NODE_FILE, "< $input_file")
     or die "Can't open file $input_file!\n";
   open(INPUT_MGMT_FILE, "< $mgm_server_file")
     or die "Can't open file $mgm_server_file!\n";
   open(NG_ASSIGN_OUT_FILE, ">> $ng_dwn_file_path_location/$ng_assign_file_name_out")
     or die "Can't write to file $ng_dwn_file_path_location/$ng_assign_file_name_out!\n";
+  chomp(my $count_node_file = `wc -l $input_file \| awk \'\{print \$1\}\'`);
   while(<INPUT_NODE_FILE>)
   {
     chomp(my $input_line = $_);
     $input_line =~ m/(.*);(.*);(.*)/;
     chomp($node_name = $1);
+    $routine_node_counter++;;
     while(<INPUT_MGMT_FILE>)
     {
       chomp($mgmt_server = $_);
@@ -1929,6 +1934,7 @@ sub download_ng_assignment
       chomp($r_sql_ng_assign);
       print NG_ASSIGN_OUT_FILE "$r_sql_ng_assign\n";
     }
+    print "\rNodes processed: $routine_node_counter\/$count_node_file"
   }
   close(INPUT_NODE_FILE);
   return $ng_assign_file_name_out;
