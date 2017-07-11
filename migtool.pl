@@ -226,7 +226,7 @@ if ($dwn_ng_assign)
   print "\nDownloading assignment of nodegroups for managed nodes...";
   print "\nGenerating filename: $migtool_sql_dir/ng_download.$datetime_stamp.out\n\n";
   $r_node_input_list = download_ng_assignment($node_input_list, $mgmt_server, $migtool_sql_dir, $datetime_stamp);
-  print "Completed!\n\n";
+  print "\n\nCompleted!\n\n";
   #system("/opt/OV/bin/OpC/call_sqlplus.sh Nodegroup-Overview | grep -ve \"$pri_hpom_fqdn\" -ve \"$sec_hpom_fqdn\" -ve \"$vip_hpom_fqdn\" | tee -a $migtool_sql_dir/node_2_nodegroup.$datetime_stamp.log > /dev/null");
   exit 0;
 }
