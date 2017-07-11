@@ -143,7 +143,7 @@ GetOptions( 'assign_ng|a=s' => \$assign_ng,                 #<---- completed - t
             'remote_test|h' => \$test_comp_remote,          #not yet implemented
             'update_certs|i' => \$update_certs,             #<---- completed - to update trusted certificates
             'update_hpom_mgr|j' => \$update_hpom_mgr,       #<---- completed - to update agent hpom variables
-            'create_dsf|n' => \$create_dsf_file
+            'create_dsf|n' => \$create_dsf_file,
             #complementary switches
             'gen_node_list|g' => \$gen_node_list,           #<---- completed - complementary switch to generate on the fly list of managed nodes
             'mgmt_server|m=s' => \$mgmt_server,             #<---- completed - complementary switch for input file with hpom host entries (hosts file like)
@@ -337,7 +337,7 @@ if ($create_dsf_file && (!$hosts_entry || !$distrib_pols || !$update_certs || !$
   #when the node input file is defined
   if($node_input_list)
   {
-    my $dsf_file_name = generate_dsf_file($final_node_list_input, $migtool_dsf_dir, $datetime_stamp);
+    my $dsf_file_name = generate_dsf_file($node_input_list, $migtool_dsf_dir, $datetime_stamp);
     print "DSF file generated: $migtool_dsf_dir/$dsf_file_name\n";
   }
   else
