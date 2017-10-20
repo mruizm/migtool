@@ -47,6 +47,7 @@ my $test_comp_remote = '';
 my $filter_string = '';
 my $create_dsf_file = '';
 my $showngs = '';
+my $create_csv = '';
 my $timeout = '3000';
 #########################
 #Init of vars while reading node list for options
@@ -159,7 +160,7 @@ GetOptions( 'assign_ng|a=s' => \$assign_ng,                 #<---- completed - t
             'update_hpom_mgr|j' => \$update_hpom_mgr,       #<---- completed - to update agent hpom variables
             'create_dsf|n' => \$create_dsf_file,
             'show_ngs|o' => \$showngs,
-            'gen_csv'
+            'gen_csv|p' => \$create_csv,
             #complementary switches
             'gen_node_list|g' => \$gen_node_list,           #<---- completed - complementary switch to generate on the fly list of managed nodes
             'mgmt_server|m=s' => \$mgmt_server,             #<---- completed - complementary switch for input file with hpom host entries (hosts file like)
