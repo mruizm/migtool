@@ -190,6 +190,19 @@ if ($gen_node_list && $node_input_list)
   print "\n";
   exit 0;
 }
+#option to generate input csv file using a list of managed nodes
+if($create_csv)
+{
+   if (!$assign_ng && !$distrib_pols && !$dwn_ng_assign && !$hosts_entry && !$test_comp_local && !$pol_own && !$test_comp_remote && !$update_certs && !$update_hpom_mgr && !$create_dsf_file && !$showngs)
+   {
+     print "Generating input nodelist with appropiate csv format...\n"
+   }
+   else
+   {
+     print "Switch --gen_csv can't be used with other option!\n";
+     exit 0;
+   }
+}
 #Option to download assignments groups for all managed nodes or based in a managed node input file
 if ($dwn_ng_assign)
 {
