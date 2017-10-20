@@ -11,6 +11,7 @@
 #            --update_certs|-i                    #<---- completed - to update trusted certificates
 #            --update_hpom_mgr|-j                 #<---- completed - to update agent hpom variables
 #            --create_dsf|-k
+#            --show_ngs|-o
 #            #complementary switches
 #            --gen_node_list|-g                   #<---- completed - complementary switch to generate on the fly list of managed nodes
 #            --mgmt_server|-m                     #<---- completed - complementary switch for input file with hpom host entries (hosts file like)
@@ -22,6 +23,8 @@
 # v1.04 -changed file generated with --gen_node_list (ip;nodename;machine_type)
 # v1.04 -added switch to create DSF file based on an input node list file
 # v1.04 -improved routine for --dwn_ng_assign now using an input csv input file
+# v1.05 -set static "YES" for nodegroup create_dir_routine
+# v1.05 -dded --show_ngs to get nodegroup report in csv format
 #
 use strict;
 use warnings;
@@ -43,6 +46,8 @@ my $test_comp_local = '';
 my $test_comp_remote = '';
 my $filter_string = '';
 my $create_dsf_file = '';
+my $showngs = '';
+my $timeout = '3000';
 #########################
 #Init of vars while reading node list for options
 my $node_is_controlled = "0";
@@ -51,6 +56,7 @@ my $in_nodeline = '';
 my $init_csv_line = '';
 my $in_nodename = '';
 my $in_nodename_ip = '';
+my $in_node_controlled = '';
 my $in_nodename_mach_type = '';
 my @r_check_node_in_HPOM = ();
 my $datetime_stamp_log = '';
@@ -114,6 +120,9 @@ my $r_node_input_list = '';
 my @splitted_filter_string = ();
 my @unique_filter_string = ();
 ########################################
+#Init of vars for $showngs options
+my $gen_ng_file_name = '';
+########################################
 #Init of script working paths
 my $migtool_dir = '/var/opt/OpC_local/MIGTOOL';
 my $migtool_node_list_dir = $migtool_dir.'/node_list';
@@ -122,6 +131,7 @@ my $migtool_tmp_dir = $migtool_dir.'/tmp';
 my $migtool_csv_dir = $migtool_dir.'/csv';
 my $migtool_sql_dir = $migtool_dir.'/sql';
 my $migtool_dsf_dir = $migtool_dir.'/dsf';
+
 chomp(my $datetime_stamp = `date "+%m%d%Y_%H%M%S"`);
 my $gen_node_list_file = $migtool_node_list_dir.'/managed_node_list.'.$datetime_stamp.'.lst';
 my $csv_file = $migtool_csv_dir.'/node_tests.'.$datetime_stamp.'.csv';
@@ -148,11 +158,14 @@ GetOptions( 'assign_ng|a=s' => \$assign_ng,                 #<---- completed - t
             'update_certs|i' => \$update_certs,             #<---- completed - to update trusted certificates
             'update_hpom_mgr|j' => \$update_hpom_mgr,       #<---- completed - to update agent hpom variables
             'create_dsf|n' => \$create_dsf_file,
+            'show_ngs|o' => \$showngs,
+            'gen_csv'
             #complementary switches
             'gen_node_list|g' => \$gen_node_list,           #<---- completed - complementary switch to generate on the fly list of managed nodes
             'mgmt_server|m=s' => \$mgmt_server,             #<---- completed - complementary switch for input file with hpom host entries (hosts file like)
             'node_input_list|l=s' => \$node_input_list,     #<---- completed - complementary switch to use input file with list of managed nodes
-            'filter|k=s' => \$filter_string);               #<---- in process - complementary switch to use with --gen_node_list to filter out nodes based
+            'timeout|n=i' => \$timeout,
+            'filter|k=s' => \$filter_string);               #<---- completed - complementary switch to use with --gen_node_list to filter out nodes based
                                                             #      in certain node caracteristic (ip/domain/net_type/match_type/comm_type)
 
 #If none of the mandatory options is defined
@@ -275,7 +288,9 @@ if ($assign_ng)
           chomp($datetime_stamp_log = `date "+%m%d%Y_%H%M%S"`);
           script_logger($datetime_stamp_log, $migtool_log, "$nodename_assign:assign_ng:$node_group_name:NODEGROUP_NOT_FOUND");
           print "Want to create node group $node_group_name? (Y/N)";
-          chomp(my $input_create_ng = <STDIN>);
+          #Asks to create nodegroup if not found
+          #chomp(my $input_create_ng = <STDIN>);
+          my $input_create_ng = "YES";
           if($input_create_ng =~ m/YES|Y|y/)
           {
             system("opcnode -add_group group_name=\"$node_group_name\" group_label=\"$node_group_name\" > /dev/null");
@@ -321,7 +336,7 @@ if ($gen_node_list && (!$hosts_entry || !$distrib_pols || !$update_certs || !$up
     print "\nRemoving duplicate parameters if found...";
     @unique_filter_string = do { my %seen; grep { !$seen{$_}++ } @splitted_filter_string };
   }
-  print "\nGenerating node list...";
+  print "\nGenerating node list...\n\n";
   gen_node_list($gen_node_list_file, \@unique_filter_string);
   if (!-f $gen_node_list_file)
   {
@@ -331,20 +346,35 @@ if ($gen_node_list && (!$hosts_entry || !$distrib_pols || !$update_certs || !$up
   }
   else
   {
-    print "\rGenerating list of nodes...COMPLETED!\n";
-    print "File generated: $gen_node_list_file\n";
+    #print "\rGenerating list of nodes...COMPLETED!\n";
     $final_node_list_input = $gen_node_list_file;
+    print "\nFile generated: $gen_node_list_file\n";
   }
 }
 
 #Switch that generates DSF file based on a managed node input file
-if ($create_dsf_file && (!$hosts_entry || !$distrib_pols || !$update_certs || !$update_hpom_mgr || !$assign_ng || !$test_comp_local || !$node_input_list || !$pol_own || !$create_dsf_file))
+if ($create_dsf_file && (!$hosts_entry || !$distrib_pols || !$update_certs || !$update_hpom_mgr || !$assign_ng || !$test_comp_local || !$pol_own || !$showngs))
 {
   #when the node input file is defined
   if($node_input_list)
   {
     my $dsf_file_name = generate_dsf_file($node_input_list, $migtool_dsf_dir, $datetime_stamp);
     print "DSF file generated: $migtool_dsf_dir/$dsf_file_name\n";
+  }
+  else
+  {
+    print "Option needs parameter --node_input_list|-l <input_file>\n\n";
+    exit 0;
+  }
+}
+
+#Switch that generates nodegroup assignment report for managed nodes
+if ($showngs && (!$hosts_entry || !$distrib_pols || !$update_certs || !$update_hpom_mgr || !$assign_ng || !$test_comp_local || !$pol_own || !$create_dsf_file))
+{
+  if($node_input_list)
+  {
+    my $gen_ng_file_name = ng_assignment_report($node_input_list, $migtool_csv_dir, $datetime_stamp);
+    print "\nNodegroup report generated: $migtool_csv_dir/$gen_ng_file_name\n";
   }
   else
   {
@@ -484,16 +514,15 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
     $node_is_controlled = "0";
     $already_tested_383 = "0";
     chomp($in_nodeline = $_);
-    $in_nodeline =~ m/(.*);(.*);(.*)/;
+    $in_nodeline =~ m/(.*);(.*);(.*);(.*)/;
     chomp($in_nodename = $1);
     chomp($in_nodename_ip = $2);
     chomp($in_nodename_mach_type = $3);
+    chomp($in_node_controlled = $4);
+    #print "nn: $in_node_controlled\n";
     if ($gen_node_list)
     {
       $init_csv_line = $in_nodeline;
-      #chomp($in_nodename = $1);
-      #chomp($in_nodename_ip = $2);
-      #chomp($in_nodename_mach_type = $3);
     }
     #If '--node_input_list|-l <input_file>' defined scripts makes and initial check of the managed node to whether if found or not
     if ($node_input_list)
@@ -510,15 +539,10 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
           #
           chomp($in_nodename_ip = "NOT_FOUND");
           chomp($in_nodename_mach_type = "NOT_FOUND");
+          chomp($in_node_controlled = "NA");
           #$init_csv_line = "$in_nodename;NOT_FOUND";
           #print "$init_csv_line\n";
         }
-        #else
-        #{
-          #chomp($in_nodename = $in_nodeline);
-          #chomp($in_nodename_ip = $r_check_node_in_HPOM[1]);
-          #chomp($in_nodename_mach_type = $r_check_node_in_HPOM[3]);
-        #}
       }
       if (!$test_comp_local)
       {
@@ -533,27 +557,19 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
           script_logger($datetime_stamp_log, $migtool_log, "$in_nodeline:node_pre_check:check_node_in_HPOM():NODE_NOT_FOUND");
           next;
         }
-        if(($r_check_node_in_HPOM[0] eq "1") && ($in_nodename_mach_type =~ m/MACH_BBC_OTHER/))
+        if($in_node_controlled eq "0")
         {
             print "\nChecking https...Skipping! NOT CONTROLLED NODE";
             chomp($datetime_stamp_log = `date "+%m%d%Y_%H%M%S"`);
             script_logger($datetime_stamp_log, $migtool_log, "$in_nodeline:node_pre_check:check_node_in_HPOM():NOT_CONTROLLED");
             next;
         }
-        if(($r_check_node_in_HPOM[0] eq "1") && ($in_nodename_mach_type !~ m/MACH_BBC_OTHER/))
+        if($in_node_controlled eq "1")
         {
           $node_is_controlled = "1";
-          #chomp($in_nodename_ip = $r_check_node_in_HPOM[1]);
-          #chomp($in_nodename_mach_type = $r_check_node_in_HPOM[3]);
         }
       }
     }
-    #Sets $node_is_controlled = 1 as generate list routine takes just controlled nodes
-    if($gen_node_list)
-    {
-      $node_is_controlled = "1";
-    }
-
     if ($node_is_controlled eq "1" || $test_comp_local)
     {
       #Option to add entries within a managed node hosts file
@@ -565,7 +581,7 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
         if ($already_tested_383 eq "0")
         {
           print "\rChecking https...TESTING";
-          if (($r_testOvdeploy_HpomToNode_383_SSL = testOvdeploy_HpomToNode_383_SSL($in_nodename, "3000")) eq "1")
+          if (($r_testOvdeploy_HpomToNode_383_SSL = testOvdeploy_HpomToNode_383_SSL($in_nodename, $timeout)) eq "1")
           {
             $already_tested_383 = "1";
           }
@@ -589,7 +605,7 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
           #}
           #print "\nMachtype: $in_nodename_mach_type\n";
           #print "\nRoutine append_om_entries_to_hosts_file() called...\n";
-          $r_append_om_entries_to_hosts_file = append_om_entries_to_hosts_file($in_nodename, $in_nodename_mach_type, $migtool_tmp_dir, $mgmt_server, "3000", $datetime_stamp);
+          $r_append_om_entries_to_hosts_file = append_om_entries_to_hosts_file($in_nodename, $in_nodename_mach_type, $migtool_tmp_dir, $mgmt_server, $timeout, $datetime_stamp);
           if ($r_append_om_entries_to_hosts_file eq "2")
           {
             chomp($datetime_stamp_log = `date "+%m%d%Y_%H%M%S"`);
@@ -615,7 +631,7 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
         if ($already_tested_383 eq "0")
         {
           print "\rChecking https...TESTING";
-          if (($r_testOvdeploy_HpomToNode_383_SSL = testOvdeploy_HpomToNode_383_SSL($in_nodename, "3000")) eq "1")
+          if (($r_testOvdeploy_HpomToNode_383_SSL = testOvdeploy_HpomToNode_383_SSL($in_nodename, $timeout)) eq "1")
           {
             $already_tested_383 = "1";
           }
@@ -656,7 +672,7 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
         if ($already_tested_383 eq "0")
         {
           print "\rChecking https...TESTING";
-          if (($r_testOvdeploy_HpomToNode_383_SSL = testOvdeploy_HpomToNode_383_SSL($in_nodename, "3000")) eq "1")
+          if (($r_testOvdeploy_HpomToNode_383_SSL = testOvdeploy_HpomToNode_383_SSL($in_nodename, $timeout)) eq "1")
           {
             $already_tested_383 = "1";
           }
@@ -675,7 +691,7 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
         {
           print "\rChecking https...PASSED!";
           print "\nUpdating certificates...";
-          $r_update_cert = update_certs($in_nodename, "3000");
+          $r_update_cert = update_certs($in_nodename, $timeout);
           #print "val: $r_update_cert\n";
           if($r_update_cert eq "0")
           {
@@ -697,7 +713,7 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
         if ($already_tested_383 eq "0")
         {
           print "\rChecking https...TESTING";
-          if (($r_testOvdeploy_HpomToNode_383_SSL = testOvdeploy_HpomToNode_383_SSL($in_nodename, "3000")) eq "1")
+          if (($r_testOvdeploy_HpomToNode_383_SSL = testOvdeploy_HpomToNode_383_SSL($in_nodename, $timeout)) eq "1")
           {
             $already_tested_383 = "1";
           }
@@ -782,7 +798,7 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
         if ($already_tested_383 eq "0")
         {
           print "\rChecking https...TESTING";
-          if (($r_testOvdeploy_HpomToNode_383_SSL = testOvdeploy_HpomToNode_383_SSL($in_nodename, "3000")) eq "1")
+          if (($r_testOvdeploy_HpomToNode_383_SSL = testOvdeploy_HpomToNode_383_SSL($in_nodename, $timeout)) eq "1")
           {
             $already_tested_383 = "1";
           }
@@ -801,7 +817,7 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
         {
           print "\rChecking https...PASSED!";
           print "\nUpdating policy ownership...";
-          $r_update_pol_own = update_pol_own($in_nodename, $pol_own, "3000");
+          $r_update_pol_own = update_pol_own($in_nodename, $pol_own, $timeout);
           #print "val: $r_update_cert\n";
           if($r_update_pol_own eq "0")
           {
@@ -824,6 +840,7 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
         #chomp(my $nodename_mt = $3);
         #@test_return_values = ();
         #$scalar_test_return_values = "";
+        #print "Node controlled? $node_is_controlled\n";
         my @sorted_valid_option_parms = sort @valid_option_parms;
         foreach my $current_valid_option_parms (@sorted_valid_option_parms)
         {
@@ -834,7 +851,7 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
               if ($gen_node_list)
               {
                 #$hash_check_value{$k_to_node_https_test} = "";
-                $r_testOvdeploy_HpomToNode_383_local = testOvdeploy_HpomToNode_383($in_nodename_ip, "3000");
+                $r_testOvdeploy_HpomToNode_383_local = testOvdeploy_HpomToNode_383($in_nodename_ip, $timeout);
                 if ($r_testOvdeploy_HpomToNode_383_local eq "1")
                 {
                   $hash_check_value{$k_to_node_http_test} = "OK";
@@ -850,13 +867,14 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
                 {
                   $hash_check_value{$k_to_node_http_test} = "NOT_FOUND";
                 }
-                if ($in_nodename_mach_type =~ m/MACH_BBC_OTHER/)
+                if ($in_node_controlled eq "0")
                 {
                   $hash_check_value{$k_to_node_http_test} = "NOT_CONTROLLED";
                 }
-                if ($in_nodename_ip ne "NOT_FOUND" && $in_nodename_mach_type !~ m/MACH_BBC_OTHER/)
+                if ($in_node_controlled eq "1")
+                #if ($in_nodename_ip ne "NOT_FOUND" && $in_nodename_mach_type !~ m/MACH_BBC_OTHER/ && $r_check_node_in_HPOM[5] eq "0")
                 {
-                  $r_testOvdeploy_HpomToNode_383_local = testOvdeploy_HpomToNode_383($in_nodename_ip, "3000");
+                  $r_testOvdeploy_HpomToNode_383_local = testOvdeploy_HpomToNode_383($in_nodename_ip, $timeout);
                   if ($r_testOvdeploy_HpomToNode_383_local eq "1")
                   {
                     $hash_check_value{$k_to_node_http_test} = "OK";
@@ -873,7 +891,7 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
               if ($gen_node_list)
               {
                 #$hash_check_value{$k_to_node_https_test} = "";
-                $r_testOvdeploy_HpomToNode_383_SSL_local = testOvdeploy_HpomToNode_383_SSL($in_nodename_ip, "3000");
+                $r_testOvdeploy_HpomToNode_383_SSL_local = testOvdeploy_HpomToNode_383_SSL($in_nodename_ip, $timeout);
                 if ($r_testOvdeploy_HpomToNode_383_SSL_local eq "1")
                 {
                   $hash_check_value{$k_to_node_https_test} = "OK";
@@ -889,13 +907,13 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
                 {
                   $hash_check_value{$k_to_node_https_test} = "NOT_FOUND";
                 }
-                if ($in_nodename_mach_type =~ m/MACH_BBC_OTHER/)
+                if ($in_node_controlled eq "0")
                 {
                   $hash_check_value{$k_to_node_https_test} = "NOT_CONTROLLED";
                 }
-                if ($in_nodename_ip ne "NOT_FOUND" && $in_nodename_mach_type !~ m/MACH_BBC_OTHER/)
+                if ($in_node_controlled eq "1")
                 {
-                  $r_testOvdeploy_HpomToNode_383_SSL_local = testOvdeploy_HpomToNode_383_SSL($in_nodename_ip, "3000");
+                  $r_testOvdeploy_HpomToNode_383_SSL_local = testOvdeploy_HpomToNode_383_SSL($in_nodename_ip, $timeout);
                   if ($r_testOvdeploy_HpomToNode_383_SSL_local eq "1")
                   {
                     $hash_check_value{$k_to_node_https_test} = "OK";
@@ -906,6 +924,7 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
                   }
                 }
               }
+              $node_is_controlled = '';
             }
             case "icmp"
             {
@@ -952,6 +971,7 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
                   $hash_check_value{$k_to_node_icmp_test} = "NA"
                 }
               }
+              $node_is_controlled = '';
             }
             case "oastatus"
             {
@@ -964,15 +984,15 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
                 {
                   $hash_check_value{$k_to_node_oa_status} = "NOT_FOUND";
                 }
-                if ($in_nodename_mach_type =~ m/MACH_BBC_OTHER/)
+                if ($in_node_controlled eq "0")
                 {
                   $hash_check_value{$k_to_node_oa_status} = "NOT_CONTROLLED";
                 }
-                if ($in_nodename_ip ne "NOT_FOUND" && $in_nodename_mach_type !~ m/MACH_BBC_OTHER/)
+                if ($in_node_controlled eq "1")
                 {
                   if ($already_tested_383 eq "0")
                   {
-                    if (($r_testOvdeploy_HpomToNode_383_SSL = testOvdeploy_HpomToNode_383_SSL($in_nodename_ip, "3000")) eq "1")
+                    if (($r_testOvdeploy_HpomToNode_383_SSL = testOvdeploy_HpomToNode_383_SSL($in_nodename_ip, $timeout)) eq "1")
                     {
                       $already_tested_383 = "1";
                     }
@@ -989,7 +1009,7 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
                   if ($already_tested_383 eq "1")
                   {
                     #If comm 383 SSL is OK exec oastatus routine
-                    $r_oastatus = oastatus($in_nodename, "3000");
+                    $r_oastatus = oastatus($in_nodename, $timeout);
                     #print "val: $r_update_cert\n";
                     if($r_oastatus eq "0")
                     {
@@ -1003,6 +1023,7 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
                 }
               }
             }
+            $node_is_controlled = '';
           }
         }
         @test_header_values = ("node_name,node_ip,node_mach_type");
@@ -1108,9 +1129,11 @@ sub gen_node_list
   my $node_name = "";
   my $node_ip = "";
   my $node_mach_type = "";
-  my $node_skipped = "0";
+  my $node_skipped = "";
   my $end_ok_node_details = "0";
-
+  my $is_node_controlled = "1";
+  my @is_controlled = ();
+  my @node_details = ();
   #If passed filter arary is null
   if(!@filter_arr)
   {
@@ -1126,66 +1149,67 @@ sub gen_node_list
     @opcnode_cmd_mach_type = qx{opcnode -list_nodes mach_type=$managed_node_mach_type_ele};
     foreach my $opcnode_cmd_mach_type_line (@opcnode_cmd_mach_type)
     {
-      #Loops through all the filters passed by parameter
-      foreach my $filter_val (@filter_arr)
+      if ($opcnode_cmd_mach_type_line =~ m/^Name\s+=\s+(.*)/)
       {
-        chomp($filter_val);
-        if ($opcnode_cmd_mach_type_line =~ m/^Name\s+=\s+(.*)/)
-        {
-          #print "Filter value: $filter_val\n";
-          chomp($node_name = $1);
-          #print "$filter_val = $node_name\n";
-          #added condition to match nodes host-like valid character
-          if (($node_name =~ m/$filter_val/) || ($node_name !~ m/^[\w\d\-_\.]+$/))
-          {
-            $node_skipped = "1";
-            #print "\nSkipped $node_name";
-            #print "Node skipped due filterer match!\n";
-          }
-        }
-        if ($opcnode_cmd_mach_type_line =~ m/^IP-Address\s+=\s+(.*)/)
-        {
-          #print "Filter value: $filter_val\n";
-          chomp($node_ip = $1);
-          #print "$filter_val = $node_ip\n";
-          if ($node_ip =~ m/$filter_val/)
-          {
-            $node_skipped = "1";
-            #print "Node skipped due filterer match!\n";
-          }
-        }
-        if ($opcnode_cmd_mach_type_line =~ m/^Machine Type\s+=\s+(.*)/)
-        {
-          $end_ok_node_details = "1";
-          #print "Filter value: $filter_val\n";
-          chomp($node_mach_type = $1);
-          #print "$filter_val = $node_mach_type\n";
-          if ($node_mach_type =~ m/$filter_val/)
-          {
-            $node_skipped = "1";
-            #print "Node skipped due filterer match!\n";
-          }
-        }
+        #print "Filter value: $filter_val\n";
+        chomp($node_name = $1);
+        push(@node_details, $node_name);
       }
-      if ($node_name && $node_ip && $node_mach_type)
+      if ($opcnode_cmd_mach_type_line =~ m/^IP-Address\s+=\s+(.*)/)
       {
-        #print "$node_name;$node_ip;$node_mach_type\n";
-        #print MYFILE "$node_name;$node_ip;$node_mach_type\n";
-        #print "node_skipped=$node_skipped\n";
-        if ($node_skipped eq "0" && $end_ok_node_details eq "1")
+        #print "Filter value: $filter_val\n";
+        chomp($node_ip = $1);
+        push(@node_details, $node_ip);
+      }
+      if ($opcnode_cmd_mach_type_line =~ m/^Machine Type\s+=\s+(.*)/)
+      {
+        $end_ok_node_details = "1";
+        chomp($node_mach_type = $1);
+        push(@node_details, $node_mach_type);
+      }
+      if ($end_ok_node_details eq "1")
+      {
+        foreach my $filter_val (@filter_arr)
         {
-          #print "$node_name\n";
-          print MYFILE "$node_name;$node_ip;$node_mach_type\n";
+          chomp($filter_val);
+          foreach my $r_node_details (@node_details)
+          {
+            chomp($r_node_details);
+            #print "Is \"$filter_val\" in \"$r_node_details\"\n";
+            if ($r_node_details =~ m/$filter_val/)
+            {
+              #print "Matched $filter_val in $r_node_details\n";
+              $node_skipped = "1";
+            }
+          }
         }
-        $node_name = '';
-        $node_ip = '';
-        $node_mach_type = '';
+        #print "Skipped? $node_skipped\n";
+        if ($node_skipped eq "0")
+        {
+          $is_node_controlled = "0";
+          if ($node_details[2] !~ m/MACH_BBC_OTHER_IP|MACH_BBC_OTHER_NON_IP/)
+          {
+            $is_node_controlled = "1";
+            @is_controlled = qx{/opt/OV/bin/OpC/call_sqlplus.sh all_nodes | grep -i $node_details[0]};
+            foreach my $r_is_controlled (@is_controlled)
+            {
+              chomp($r_is_controlled);
+              if($r_is_controlled =~ m/Msg Allowed/)
+              {
+                $is_node_controlled = "0";
+              }
+            }
+          }
+          print "$node_details[0];$node_details[1];$node_details[2];$is_node_controlled\n";
+          print MYFILE "$node_details[0];$node_details[1];$node_details[2];$is_node_controlled\n";
+
+        }
+        $end_ok_node_details = "0";
+        @node_details = ();
         $node_skipped = "0";
       }
     }
-    $end_ok_node_details = "0";
   }
-  close (MYFILE);
 }
 
 sub distrib_pols
@@ -1206,25 +1230,27 @@ sub distrib_pols
 sub update_certs
 {
   my ($nodename, $cmdtimeout) = @_;
+  my @cert_update_cmd = qx{ovdeploy -cmd "ovcert -updatetrusted" -node $nodename -cmd_timeout $cmdtimeout"};
+  #print "timeout: $cmdtimeout\n";
   #print "ovdeploy -cmd \"ovcert -updatetrusted\" -node $nodename -cmd_timeout $cmdtimeout\n";
-  system("ovdeploy -cmd \"ovcert -updatetrusted\" -node $nodename -cmd_timeout $cmdtimeout > /dev/null");
-  if ($? eq "0")
-  {
-    return 0;
-  }
-  else
-  {
-    return 1;
-  }
-  #foreach my $update_certs_line (@update_certs)
+  #system("ovdeploy -cmd \"ovcert -updatetrusted\" -node $nodename -cmd_timeout $cmdtimeout > /dev/null");
+  #if ($? eq "0")
   #{
-  #  chomp($update_certs_line);
-  #  if ($update_certs_line =~ m/update was successful/)
-  #  {
-  #    return 0;
-  #  }
+  #  return 0;
   #}
-  #return 1;
+  #else
+  #{
+  #  return 1;
+  #}
+  foreach my $update_certs_line (@cert_update_cmd)
+  {
+    chomp($update_certs_line);
+    if ($update_certs_line =~ m/update was successful/)
+    {
+      return 0;
+    }
+  }
+  return 1;
 }
 
 #########################################################
@@ -1345,12 +1371,14 @@ sub csv_logger
 #	@Parms:
 #		$nodename : Nodename to check
 #	Return:
-#		@node_mach_type_ip_addr = (node_exists, node_ip_address, node_net_type, node_mach_type, comm_type)	:
+#		@node_mach_type_ip_addr = (node_exists, node_ip_address, node_net_type, node_mach_type, comm_type, is_controlled)	:
 #															[0|1],
 #															[<ip_addr>],
 #															[NETWORK_NO_NODE|NETWORK_IP|NETWORK_OTHER|NETWORK_UNKNOWN|PATTERN_IP_ADDR|PATTERN_IP_NAME|PATTERN_OTHER],
 #															[MACH_BBC_LX26|MACH_BBC_SOL|MACH_BBC_HPUX|MACH_BBC_AIX|MACH_BBC_WIN|MACH_BBC_OTHER],
 #                             [COMM_UNSPEC_COMM|COMM_BBC]
+#                             [0|1] 1:is controlled
+
 #		$node_mach_type_ip_addr[0] = 0: If nodename is not found within HPOM
 #   $node_mach_type_ip_addr[0] = 1: If nodename is found within HPOM
 ######################################################################
@@ -1361,6 +1389,8 @@ sub check_node_in_HPOM
 	my @node_mach_type_ip_addr = ();
 	my ($node_ip_address, $node_mach_type, $node_net_type, $node_comm_type) = ("", "", "", "");
 	my @opcnode_out = qx{opcnode -list_nodes node_list=$nodename};
+  my @is_controlled = ();
+  my $is_node_controlled = "1";
 	foreach my $opnode_line_out (@opcnode_out)
 	{
 		chomp($opnode_line_out);
@@ -1437,6 +1467,7 @@ sub rename_file_routine
   }
   if ($node_os =~ m/MACH_BBC_LX26|MACH_BBC_SOL|MACH_BBC_HPUX|MACH_BBC_AIX/)
   {
+    print "ovdeploy -cmd \'mv \"$file_path_one\/$filename\" \"$file_path_two\/$filename.$date_time.bck\"\' -node $nodename -cmd_timeout $cmdtimeout\n";
     system("ovdeploy -cmd \'mv \"$file_path_one\/$filename\" \"$file_path_two\/$filename.$date_time.bck\"\' -node $nodename -cmd_timeout $cmdtimeout > /dev/null");
   }
 	if ($? ne "0")
@@ -1589,7 +1620,7 @@ sub append_om_entries_to_hosts_file
     #my ($nodename, $mon_filename, $mon_file_sd, $mon_file_td, $verbose_flag, $timeout) = @_;
     print "\nUploading hosts file to managed node...";
     system("mv $target_dir_download'/hosts.tmp' $target_dir_download'/hosts'");
-    my $r_upload_mon_file = upload_mon_file($nodename, "hosts", $target_dir_download, $source_file_dir, "3000");
+    my $r_upload_mon_file = upload_mon_file($nodename, "hosts", $target_dir_download, $source_file_dir, $timeout);
     if ($r_upload_mon_file eq "0")
     {
       print "\rUploading hosts file to managed node...COMPLETED!";
@@ -1823,12 +1854,16 @@ sub oastatus
   foreach my $oastatus_cmd_line (@oastatus_cmd)
   {
     chomp($oastatus_cmd_line);
-    if ($oastatus_cmd_line =~ m/(coda|ovbbccb|ovcd|ovconfd)\s+\(\d+\)\sis\s+running$/)
+    if ($oastatus_cmd_line =~ m/(ovbbccb|ovcd|ovconfd)\s+\(\d+\)\sis\s+running$/)
     {
       $procs_ok++;
     }
+    #if ($oastatus_cmd_line =~ m/controlled nor monitored/)
+    #{
+    #  return 2;
+    #}
   }
-  if ($procs_ok == 4)
+  if ($procs_ok == 3)
   {
     return 0;
   }
@@ -1879,7 +1914,7 @@ sub generate_dsf_file
   while(<INPUT_NODE_FILE>)
   {
     chomp(my $input_line = $_);
-    $input_line =~ m/(.*);(.*);(.*)/;
+    $input_line =~ m/(.*);(.*);(.*);(.*)/;
     chomp($node_name = $1);
     chomp($node_ip = $2);
     chomp($node_mach_type = $3);
@@ -1916,7 +1951,7 @@ sub download_ng_assignment
   while(<INPUT_NODE_FILE>)
   {
     chomp(my $input_line = $_);
-    $input_line =~ m/(.*);(.*);(.*)/;
+    $input_line =~ m/(.*);(.*);(.*);(.*)/;
     chomp($node_name = $1);
     $routine_node_counter++;;
     while(<INPUT_MGMT_FILE>)
@@ -1935,6 +1970,61 @@ sub download_ng_assignment
       print NG_ASSIGN_OUT_FILE "$r_sql_ng_assign\n";
     }
     print "\rNodes processed: $routine_node_counter\/$count_node_file"
+  }
+  close(INPUT_NODE_FILE);
+  return $ng_assign_file_name_out;
+}
+
+sub ng_assignment_report
+{
+  my ($input_file, $ng_dwn_file_path_location, $date_time) = @_;
+  my ($node_name, $node_ip, $node_mach_type, $node_controlled, $mgmt_server) = '';
+  my $ng_assign_file_name_out = "ng_report.$date_time.csv";
+  my @sql_ng_assign = ();
+  my $routine_node_counter = "0";
+  my $node_name_sql = "";
+  my $ng_name_sql = "";
+  my $node_name_sql_last = "";
+  my $ng_concat = "";
+  my $ng_final_string = '';
+  my @ng_arr = ();
+  open(INPUT_NODE_FILE, "< $input_file")
+    or die "Can't open file $input_file!\n";
+  open(NG_ASSIGN_OUT_FILE, ">> $ng_dwn_file_path_location/$ng_assign_file_name_out")
+    or die "Can't write to file $ng_dwn_file_path_location/$ng_assign_file_name_out!\n";
+  chomp(my $count_node_file = `wc -l $input_file \| awk \'\{print \$1\}\'`);
+  while(<INPUT_NODE_FILE>)
+  {
+    chomp(my $input_line = $_);
+    $input_line =~ m/(.*);(.*);(.*);(.*)/;
+    chomp($node_name = $1);
+    chomp($node_ip = $2);
+    chomp($node_mach_type = $3);
+    chomp($node_controlled = $4);
+    $routine_node_counter++;;
+    @sql_ng_assign = qx/\/opt\/OV\/bin\/OpC\/call_sqlplus.sh Nodegroup-Overview_migtool $node_name/;
+    foreach my $r_sql_ng_assign (@sql_ng_assign)
+    {
+      chomp($r_sql_ng_assign);
+      $r_sql_ng_assign =~ m/(.*)\s+(.*)/;
+      chomp($ng_name_sql = $2);
+      push(@ng_arr, $ng_name_sql);
+      #$ng_concat = $ng_concat.";".$ng_name_sql;
+      #print NG_ASSIGN_OUT_FILE "$r_sql_ng_assign\n";
+    }
+    my @sorted_ng_arr = sort @ng_arr;
+    foreach my $r_sorted_ng_arr (@sorted_ng_arr)
+    {
+      $ng_concat = $ng_concat.";".$r_sorted_ng_arr;
+    }
+    $ng_concat =~ s/^;//;
+    $ng_final_string = "$node_name;$node_ip;$node_mach_type;$node_controlled;$ng_concat\n";
+    $ng_final_string =~ s/;$//;
+    print "$ng_final_string";
+    print NG_ASSIGN_OUT_FILE $ng_final_string;
+    $ng_concat = "";
+    @ng_arr = ();
+    #print "\rNodes processed: $routine_node_counter\/$count_node_file"
   }
   close(INPUT_NODE_FILE);
   return $ng_assign_file_name_out;
