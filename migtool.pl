@@ -12,6 +12,7 @@
 #            --update_hpom_mgr|-j                 #<---- completed - to update agent hpom variables
 #            --create_dsf|-k
 #            --show_ngs|-o
+
 #            #complementary switches
 #            --gen_node_list|-g                   #<---- completed - complementary switch to generate on the fly list of managed nodes
 #            --mgmt_server|-m                     #<---- completed - complementary switch for input file with hpom host entries (hosts file like)
@@ -24,7 +25,8 @@
 # v1.04 -added switch to create DSF file based on an input node list file
 # v1.04 -improved routine for --dwn_ng_assign now using an input csv input file
 # v1.05 -set static "YES" for nodegroup create_dir_routine
-# v1.05 -dded --show_ngs to get nodegroup report in csv format
+# v1.05 -added --show_ngs to get nodegroup report in csv format
+# v1.06 -added --create_csv to generate csv format file using just nodename
 #
 use strict;
 use warnings;
