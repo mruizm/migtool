@@ -5,7 +5,7 @@
 #            --distrib_pols|-b                    #<---- completed - to distribute policies
 #            --dwn_ng_assign|-c                   #<---- completed - to download nodegroup assignment
 #            --hosts_entry|-d                     #<---- completed - to add hpom entries into node's hosts file
-#            --local_test|-e 'http|https|icmp|oastatus'    #<---- completed - to test 'http|https|icmp' from HPOM to managed node
+#            --local_test|-e 'http|https|icmp|oastatus'    #<---- completed - to test 'http|https|icmp|oastatus' from HPOM to managed node
 #            --pol_own|-f '<target_pri_hpom>'     #<---- in progress - to update managed node policy ownership
 #            --remote_test|-h                     #not yet implemented
 #            --update_certs|-i                    #<---- completed - to update trusted certificates
@@ -162,7 +162,7 @@ GetOptions( 'assign_ng|a=s' => \$assign_ng,                 #<---- completed - t
             'update_hpom_mgr|j' => \$update_hpom_mgr,       #<---- completed - to update agent hpom variables
             'create_dsf|n' => \$create_dsf_file,
             'show_ngs|o' => \$showngs,
-            'gen_csv|p' => \$create_csv,
+            #'gen_csv|p' => \$create_csv,
             #complementary switches
             'gen_node_list|g' => \$gen_node_list,           #<---- completed - complementary switch to generate on the fly list of managed nodes
             'mgmt_server|m=s' => \$mgmt_server,             #<---- completed - complementary switch for input file with hpom host entries (hosts file like)
@@ -190,19 +190,40 @@ if ($gen_node_list && $node_input_list)
   print "\n";
   exit 0;
 }
+#New option
 #option to generate input csv file using a list of managed nodes
-if($create_csv)
-{
-   if (!$assign_ng && !$distrib_pols && !$dwn_ng_assign && !$hosts_entry && !$test_comp_local && !$pol_own && !$test_comp_remote && !$update_certs && !$update_hpom_mgr && !$create_dsf_file && !$showngs)
-   {
-     print "Generating input nodelist with appropiate csv format...\n"
-   }
-   else
-   {
-     print "Switch --gen_csv can't be used with other option!\n";
-     exit 0;
-   }
-}
+#if($create_csv)
+#{
+#   if ((!$assign_ng && !$distrib_pols && !$dwn_ng_assign && !$hosts_entry && !$test_comp_local && !$pol_own && !$test_comp_remote && !$update_certs && !$update_hpom_mgr && !$create_dsf_file && !$showngs) && ($node_input_list))
+#   {
+#     print "Generating input nodelist with appropiate csv format...\n";
+#     open(IN_SIMPLE_NODENAMES, "< $node_input_list")
+#      or die "\nCan\'t open file $node_input_list\n";
+#    while(<IN_SIMPLE_NODENAMES>)
+#    {
+#      chomp(my $nodename_line = $_);
+#      push(@unique_filter_string, $nodename_line);
+#    }
+#     gen_node_list($gen_node_list_file, \@unique_filter_string, "N");
+#     if (!-f $gen_node_list_file)
+#     {
+#       print "\rGenerating list of nodes...FAILED!";
+#       print "Can't continue with script!\n";
+#       exit 0;
+#     }
+#     else
+#     {
+#       #print "\rGenerating list of nodes...COMPLETED!\n";
+#       $final_node_list_input = $gen_node_list_file;
+#       print "\nFile generated: $gen_node_list_file\n";
+#     }
+#   }
+#   else
+#   {
+#     print "Switch --gen_csv can't be used with other option or missing --node_input_list!\n";
+#     exit 0;
+#   }
+#}
 #Option to download assignments groups for all managed nodes or based in a managed node input file
 if ($dwn_ng_assign)
 {
@@ -353,7 +374,7 @@ if ($gen_node_list && (!$hosts_entry || !$distrib_pols || !$update_certs || !$up
     @unique_filter_string = do { my %seen; grep { !$seen{$_}++ } @splitted_filter_string };
   }
   print "\nGenerating node list...\n\n";
-  gen_node_list($gen_node_list_file, \@unique_filter_string);
+  gen_node_list($gen_node_list_file, \@unique_filter_string, "Y");
   if (!-f $gen_node_list_file)
   {
     print "\rGenerating list of nodes...FAILED!";
@@ -506,6 +527,7 @@ if($hosts_entry || $distrib_pols || $update_certs || $update_hpom_mgr || $test_c
   if ($gen_node_list)
   {
     print "\nGenerating controlled node list...";
+    print "node_name;node_ip;_node_mach_type;node_is_controlled\n";
     gen_controlled_node_list($gen_node_list_file);
     if (!-f $gen_node_list_file)
     {
